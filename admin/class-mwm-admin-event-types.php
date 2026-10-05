@@ -29,6 +29,22 @@ class MWM_Admin_Event_Types {
 	}
 
 	public function dispatch(): void {
+		// Route to edit form
+		if ( isset( $_GET['action'] ) && in_array( sanitize_key( wp_unslash( $_GET['action'] ?? '' ) ), array( 'edit', 'new' ), true ) ) {
+			$this->render_edit();
+			return;
+		}
+
+		// phpcs:ignore Squiz.PHP.CommentedOutCode.Found -- label comment, not code
+		// Default: list
+		$this->render_list();
+	}
+
+	/**
+	 * Run write actions on the load-{page} hook, before WordPress renders the
+	 * admin header — redirects and JSON responses go out header-clean.
+	 */
+	public function handle_actions(): void {
 		// Handle delete (GET with nonce)
 		if ( isset( $_GET['action'] ) && sanitize_key( wp_unslash( $_GET['action'] ?? '' ) ) === 'delete' && isset( $_GET['id'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce verified inside the handler
 			$this->handle_delete();
@@ -40,16 +56,6 @@ class MWM_Admin_Event_Types {
 			$this->handle_save();
 			return; // handle_save() redirects
 		}
-
-		// Route to edit form
-		if ( isset( $_GET['action'] ) && in_array( sanitize_key( wp_unslash( $_GET['action'] ?? '' ) ), array( 'edit', 'new' ), true ) ) {
-			$this->render_edit();
-			return;
-		}
-
-		// phpcs:ignore Squiz.PHP.CommentedOutCode.Found -- label comment, not code
-		// Default: list
-		$this->render_list();
 	}
 
 	// -------------------------------------------------------------------------

@@ -28,7 +28,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class MWM_Google_Connect {
 
 	private const RELAY_URL      = 'https://plugins.tapps.design/connect';
-	private const SCOPE          = 'https://www.googleapis.com/auth/calendar.events';
+	private const SCOPE          = 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.calendarlist.readonly https://www.googleapis.com/auth/calendar.freebusy';
 	private const TICKET_TTL     = 600;   // seconds the ticket stays valid.
 	private const OAUTH_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 
@@ -139,7 +139,7 @@ class MWM_Google_Connect {
 				'client_id'     => self::client_id(),
 				'redirect_uri'  => self::redirect_uri(),
 				'response_type' => 'code',
-				'scope'         => rawurlencode( self::SCOPE ),
+				'scope'         => self::SCOPE,
 				'access_type'   => 'offline',
 				'prompt'        => 'consent',
 				'state'         => $state,

@@ -37,12 +37,19 @@ class MWM_Admin_Email {
 	}
 
 	public function dispatch(): void {
+		$this->render();
+	}
+
+	/**
+	 * Run write actions on the load-{page} hook, before WordPress renders the
+	 * admin header — redirects and JSON responses go out header-clean.
+	 */
+	public function handle_actions(): void {
 		if ( isset( $_POST['mwm_save_email'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce verified inside the handler
 			$this->handle_save();
 		} elseif ( isset( $_POST['mwm_test_email'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce verified inside the handler
 			$this->handle_test();
 		}
-		$this->render();
 	}
 
 	// -------------------------------------------------------------------------

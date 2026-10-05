@@ -13,6 +13,18 @@ class MWM_Admin_Google {
 			wp_die( esc_html__( 'Permission denied.', 'meet-with-me' ) );
 		}
 
+		$this->render();
+	}
+
+	/**
+	 * Run write actions on the load-{page} hook, before WordPress renders the
+	 * admin header — redirects and JSON responses go out header-clean.
+	 */
+	public function handle_actions(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Permission denied.', 'meet-with-me' ) );
+		}
+
 		// OAuth callback from Google (relay / one-click flow)
 		if ( isset( $_GET['mwm_relay_cb'] ) ) {
 			$this->handle_relay_callback();
@@ -47,8 +59,6 @@ class MWM_Admin_Google {
 			$this->handle_disconnect();
 			return;
 		}
-
-		$this->render();
 	}
 
 	// -------------------------------------------------------------------------

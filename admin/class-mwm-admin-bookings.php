@@ -20,6 +20,20 @@ class MWM_Admin_Bookings {
 			return;
 		}
 
+		$this->render_list();
+	}
+
+	/**
+	 * Run write actions on the load-{page} hook, before WordPress renders the
+	 * admin header — redirects and JSON responses go out header-clean.
+	 */
+	public function handle_actions(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Permission denied.', 'meet-with-me' ) );
+		}
+
+		$action = sanitize_key( wp_unslash( $_GET['action'] ?? '' ) );
+
 		if ( isset( $_POST['mwm_save_admin_notes'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce verified inside the handler
 			$this->handle_save_notes();
 			return;
@@ -29,8 +43,6 @@ class MWM_Admin_Bookings {
 			$this->handle_cancel();
 			return;
 		}
-
-		$this->render_list();
 	}
 
 	// -------------------------------------------------------------------------

@@ -13,11 +13,21 @@ class MWM_Admin_Meetings {
 			wp_die( esc_html__( 'Permission denied.', 'meet-with-me' ) );
 		}
 
+		$this->render();
+	}
+
+	/**
+	 * Run write actions on the load-{page} hook, before WordPress renders the
+	 * admin header — redirects and JSON responses go out header-clean.
+	 */
+	public function handle_actions(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Permission denied.', 'meet-with-me' ) );
+		}
+
 		if ( isset( $_POST['mwm_save_meetings'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce verified inside the handler
 			$this->handle_save();
 		}
-
-		$this->render();
 	}
 
 	private function handle_save(): void {

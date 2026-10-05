@@ -18,7 +18,8 @@ class MWM_Admin {
 	}
 
 	public function register_menus(): void {
-		add_menu_page(
+		$hooks   = array();
+		$hooks[] = add_menu_page(
 			__( 'Meet With Me', 'meet-with-me' ),
 			__( 'Meet With Me', 'meet-with-me' ),
 			'manage_options',
@@ -37,7 +38,7 @@ class MWM_Admin {
 			array( $this, 'page_bookings' )
 		);
 
-		add_submenu_page(
+		$hooks[] = add_submenu_page(
 			'meet-with-me',
 			__( 'Meeting Types', 'meet-with-me' ),
 			__( 'Meeting Types', 'meet-with-me' ),
@@ -46,7 +47,7 @@ class MWM_Admin {
 			array( $this, 'page_event_types' )
 		);
 
-		add_submenu_page(
+		$hooks[] = add_submenu_page(
 			'meet-with-me',
 			__( 'Settings', 'meet-with-me' ),
 			__( 'Settings', 'meet-with-me' ),
@@ -54,6 +55,42 @@ class MWM_Admin {
 			'mwm-settings',
 			array( $this, 'page_settings' )
 		);
+
+		// Route write actions on load-{page}, before the admin header renders,
+		// so redirects and JSON responses go out header-clean.
+		foreach ( $hooks as $hook ) {
+			if ( is_string( $hook ) ) {
+				add_action( 'load-' . $hook, array( $this, 'route_page_actions' ) );
+			}
+		}
+	}
+
+	/**
+	 * Early action router: mirrors the page routing but calls each
+	 * controller's handle_actions() instead of rendering.
+	 */
+	public function route_page_actions(): void {
+		$page = sanitize_key( wp_unslash( $_GET['page'] ?? '' ) );
+
+		if ( $page === 'meet-with-me' ) {
+			require_once MWM_PLUGIN_DIR . 'includes/class-mwm-booking.php';
+			require_once MWM_PLUGIN_DIR . 'admin/class-mwm-admin-bookings.php';
+			( new MWM_Admin_Bookings() )->handle_actions();
+			return;
+		}
+
+		if ( $page === 'mwm-event-types' ) {
+			require_once MWM_PLUGIN_DIR . 'admin/class-mwm-admin-event-types.php';
+			( new MWM_Admin_Event_Types() )->handle_actions();
+			return;
+		}
+
+		if ( $page === 'mwm-settings' ) {
+			$controller = $this->settings_controller();
+			if ( $controller ) {
+				$controller->handle_actions();
+			}
+		}
 	}
 
 	public function page_bookings(): void {
@@ -68,58 +105,59 @@ class MWM_Admin {
 	}
 
 	public function page_settings(): void {
+		$controller = $this->settings_controller();
+		if ( $controller ) {
+			$controller->dispatch();
+			return;
+		}
+
+		// The Help & Setup tab is a static view.
+		$current_tab = 'help';
+		require MWM_PLUGIN_DIR . 'admin/views/settings/help.php';
+	}
+
+	/**
+	 * Resolve the current settings tab to its controller (null for the help
+	 * tab, which has no actions of its own).
+	 */
+	private function settings_controller(): ?object {
 		$tab          = sanitize_key( wp_unslash( $_GET['tab'] ?? 'general' ) );
-		$allowed_tabs = array( 'general', 'availability', 'google', 'meetings', 'email', 'style', 'help' );
+		$allowed_tabs = array( 'general', 'availability', 'google', 'meetings', 'email', 'style' );
 		if ( ! in_array( $tab, $allowed_tabs, true ) ) {
 			$tab = 'general';
 		}
 
-		if ( $tab === 'general' ) {
-			require_once MWM_PLUGIN_DIR . 'admin/class-mwm-admin-general.php';
-			( new MWM_Admin_General() )->dispatch();
-			return;
-		}
+		$map = array(
+			'general'      => 'class-mwm-admin-general.php',
+			'availability' => 'class-mwm-admin-availability.php',
+			'google'       => 'class-mwm-admin-google.php',
+			'meetings'     => 'class-mwm-admin-meetings.php',
+			'email'        => 'class-mwm-admin-email.php',
+			'style'        => 'class-mwm-admin-style.php',
+		);
 
 		if ( $tab === 'availability' ) {
 			require_once MWM_PLUGIN_DIR . 'includes/class-mwm-availability.php';
-			require_once MWM_PLUGIN_DIR . 'admin/class-mwm-admin-availability.php';
-			( new MWM_Admin_Availability() )->dispatch();
-			return;
 		}
-
 		if ( $tab === 'google' ) {
 			require_once MWM_PLUGIN_DIR . 'includes/class-mwm-google-calendar.php';
-			require_once MWM_PLUGIN_DIR . 'admin/class-mwm-admin-google.php';
-			( new MWM_Admin_Google() )->dispatch();
-			return;
 		}
-
-		if ( $tab === 'meetings' ) {
-			require_once MWM_PLUGIN_DIR . 'admin/class-mwm-admin-meetings.php';
-			( new MWM_Admin_Meetings() )->dispatch();
-			return;
-		}
-
 		if ( $tab === 'email' ) {
 			require_once MWM_PLUGIN_DIR . 'includes/class-mwm-email.php';
-			require_once MWM_PLUGIN_DIR . 'admin/class-mwm-admin-email.php';
-			( new MWM_Admin_Email() )->dispatch();
-			return;
 		}
 
-		if ( $tab === 'style' ) {
-			require_once MWM_PLUGIN_DIR . 'admin/class-mwm-admin-style.php';
-			( new MWM_Admin_Style() )->dispatch();
-			return;
-		}
+		require_once MWM_PLUGIN_DIR . 'admin/' . $map[ $tab ];
 
-		if ( $tab === 'help' ) {
-			$current_tab = 'help';
-			require MWM_PLUGIN_DIR . 'admin/views/settings/help.php';
-			return;
-		}
+		$classes = array(
+			'general'      => 'MWM_Admin_General',
+			'availability' => 'MWM_Admin_Availability',
+			'google'       => 'MWM_Admin_Google',
+			'meetings'     => 'MWM_Admin_Meetings',
+			'email'        => 'MWM_Admin_Email',
+			'style'        => 'MWM_Admin_Style',
+		);
 
-		require_once MWM_PLUGIN_DIR . "admin/views/settings/{$tab}.php";
+		return new $classes[ $tab ]();
 	}
 
 	public function enqueue_assets( string $hook ): void {
