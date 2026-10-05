@@ -28,6 +28,7 @@ class MWM_Plugin {
 		require_once MWM_PLUGIN_DIR . 'includes/class-mwm-booking.php';
 		require_once MWM_PLUGIN_DIR . 'api/class-mwm-rest.php';
 		require_once MWM_PLUGIN_DIR . 'includes/class-mwm-google-calendar.php';
+		require_once MWM_PLUGIN_DIR . 'includes/class-mwm-google-connect.php';
 		require_once MWM_PLUGIN_DIR . 'includes/class-mwm-zoom.php';
 		require_once MWM_PLUGIN_DIR . 'includes/class-mwm-online-meetings.php';
 		require_once MWM_PLUGIN_DIR . 'includes/class-mwm-ics.php';

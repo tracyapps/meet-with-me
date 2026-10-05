@@ -32,6 +32,8 @@ class MWM_Settings {
 			'token_expiry'           => 0,
 			'calendar_ids'           => array(),
 			'write_back_calendar_id' => '',
+			'connect_mode'           => '',
+			'relay_client_id'        => '',
 		),
 		'meetings' => array(
 			'zoom_account_id'       => '',

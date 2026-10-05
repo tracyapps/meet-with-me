@@ -13,7 +13,13 @@ class MWM_Admin_Google {
 			wp_die( esc_html__( 'Permission denied.', 'meet-with-me' ) );
 		}
 
-		// OAuth callback from Google
+		// OAuth callback from Google (relay / one-click flow)
+		if ( isset( $_GET['mwm_relay_cb'] ) ) {
+			$this->handle_relay_callback();
+			return;
+		}
+
+		// OAuth callback from Google (own-credentials flow)
 		if ( isset( $_GET['mwm_oauth_callback'], $_GET['code'] ) ) {
 			$this->handle_oauth_callback();
 			return;
@@ -48,6 +54,36 @@ class MWM_Admin_Google {
 	// -------------------------------------------------------------------------
 	// Write operations
 	// -------------------------------------------------------------------------
+
+	/**
+	 * Relay flow callback: the browser returns with our ticket plus the
+	 * relay's one-time code; redeem them together. The ticket transient
+	 * proves this site (and this admin session) started the flow.
+	 */
+	private function handle_relay_callback(): void {
+		$ticket = sanitize_text_field( wp_unslash( $_GET['ticket'] ?? '' ) );
+		$otc    = sanitize_text_field( wp_unslash( $_GET['otc'] ?? '' ) );
+
+		if ( isset( $_GET['mwm_relay_error'] ) ) {
+			$this->redirect( 'relay_denied' );
+			return;
+		}
+
+		if ( ! $ticket || ! $otc || ! MWM_Google_Connect::ticket_is_pending( $ticket ) ) {
+			$this->redirect( 'relay_error' );
+			return;
+		}
+		MWM_Google_Connect::forget_ticket( $ticket );
+
+		$payload = MWM_Google_Connect::redeem( $ticket, $otc );
+		if ( is_wp_error( $payload ) ) {
+			$this->redirect( 'relay_error' );
+			return;
+		}
+
+		MWM_Google_Connect::store_tokens( $payload );
+		$this->redirect( 'connected' );
+	}
 
 	private function handle_oauth_callback(): void {
 		// Verify state
@@ -153,6 +189,9 @@ class MWM_Admin_Google {
 		$has_credentials = MWM_Google_Calendar::has_credentials();
 		$redirect_uri    = MWM_Google_Calendar::redirect_uri();
 		$calendar_list   = $is_connected ? MWM_Google_Calendar::get_calendar_list() : array();
+		$relay_available = MWM_Google_Connect::is_available();
+		$relay_oauth_url = $relay_available ? MWM_Google_Connect::get_oauth_url() : '#';
+		$connect_mode    = (string) ( $settings['connect_mode'] ?? '' );
 		require MWM_PLUGIN_DIR . 'admin/views/settings/google.php';
 	}
 
@@ -191,6 +230,14 @@ class MWM_Admin_Google {
 			'saved'             => array(
 				'type'    => 'success',
 				'message' => __( 'Settings saved.', 'meet-with-me' ),
+			),
+			'relay_denied'      => array(
+				'type'    => 'warning',
+				'message' => __( 'Google authorisation was cancelled.', 'meet-with-me' ),
+			),
+			'relay_error'       => array(
+				'type'    => 'error',
+				'message' => __( 'Could not complete the Google connection. Please try again, or use your own Google project below.', 'meet-with-me' ),
 			),
 			'oauth_denied'      => array(
 				'type'    => 'warning',

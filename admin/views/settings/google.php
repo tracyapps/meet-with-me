@@ -104,82 +104,95 @@ if ( $is_connected ) {
 	<form method="post" action="" id="mwm-gcal-form">
 		<?php wp_nonce_field( 'mwm_google_settings' ); ?>
 
-		<!-- Step 1: GCP Credentials -->
+		<?php if ( ! $is_connected ) : ?>
+		<!-- Step 1: Connect (one click via the plugins.tapps.design relay) -->
 		<div class="mwm-card">
 			<h2>
 				<span class="mwm-step-num">1</span>
-				<?php esc_html_e( 'Google API Credentials', 'meet-with-me' ); ?>
-			</h2>
-			<p class="description" style="margin-bottom:16px;">
-				<?php esc_html_e( 'You need a Google Cloud project with the Calendar API enabled and an OAuth 2.0 client ID. ', 'meet-with-me' ); ?>
-				<a href="<?php echo esc_url( $help_url ); ?>">
-					<?php esc_html_e( 'Step-by-step setup guide →', 'meet-with-me' ); ?>
-				</a>
-			</p>
-
-			<div class="mwm-gcal-redirect-uri">
-				<label><?php esc_html_e( 'Authorised Redirect URI', 'meet-with-me' ); ?></label>
-				<p class="description" style="margin-bottom:6px;"><?php esc_html_e( 'Add this exact URL to your Google OAuth client\'s "Authorised redirect URIs" in Google Cloud Console:', 'meet-with-me' ); ?></p>
-				<code class="mwm-shortcode" data-copy tabindex="0" role="button"><?php echo esc_html( $redirect_uri ); ?></code>
-			</div>
-
-			<table class="form-table" role="presentation" style="margin-top:16px;">
-				<tr>
-					<th><label for="client_id"><?php esc_html_e( 'Client ID', 'meet-with-me' ); ?></label></th>
-					<td>
-						<input type="text" id="client_id" name="client_id" class="large-text"
-							value="<?php echo esc_attr( $settings['client_id'] ); ?>"
-							placeholder="xxxxxxxxxx.apps.googleusercontent.com">
-					</td>
-				</tr>
-				<tr>
-					<th><label for="client_secret"><?php esc_html_e( 'Client Secret', 'meet-with-me' ); ?></label></th>
-					<td>
-						<?php // The stored secret is never echoed back into the page: leave blank to keep it. ?>
-						<input type="password"
-							id="client_secret" name="client_secret" class="regular-text"
-							value=""
-							placeholder="<?php echo $has_secret ? esc_attr( '••••••••••••' ) : esc_attr__( 'Your client secret', 'meet-with-me' ); ?>"
-							autocomplete="new-password" <?php disabled( $has_secret ); ?>>
-						<?php if ( $has_secret ) : ?>
-							<label style="margin-left:8px;">
-								<input type="checkbox" class="mwm-replace-secret-toggle" data-target="#client_secret"> <?php esc_html_e( 'Replace secret', 'meet-with-me' ); ?>
-							</label>
-							<p class="description"><?php esc_html_e( 'A secret is saved. Tick “Replace secret” to enter a new one — saved secrets are never shown again.', 'meet-with-me' ); ?></p>
-						<?php endif; ?>
-					</td>
-				</tr>
-			</table>
-
-			<p class="submit" style="padding-bottom:0;">
-				<button type="submit" name="mwm_save_google" class="button button-secondary">
-					<?php esc_html_e( 'Save Credentials', 'meet-with-me' ); ?>
-				</button>
-			</p>
-		</div>
-
-		<!-- Step 2: Connect -->
-		<div class="mwm-card">
-			<h2>
-				<span class="mwm-step-num">2</span>
-				<?php esc_html_e( 'Connect Your Account', 'meet-with-me' ); ?>
+				<?php esc_html_e( 'Connect Your Google Account', 'meet-with-me' ); ?>
 			</h2>
 
-			<?php if ( $is_connected ) : ?>
-				<p><?php esc_html_e( 'Your Google account is connected. If you need to re-authorise, disconnect first then reconnect.', 'meet-with-me' ); ?></p>
-			<?php elseif ( $has_credentials ) : ?>
+			<?php if ( $relay_available ) : ?>
 				<p class="description" style="margin-bottom:16px;">
-					<?php esc_html_e( 'Click below to authorise Meet With Me to read and write your Google Calendar.', 'meet-with-me' ); ?>
+					<?php esc_html_e( 'One click, no developer setup. You will approve access with Google and come straight back here. Uses the plugins.tapps.design connection service — your calendars sync directly with Google afterwards.', 'meet-with-me' ); ?>
+					<a href="https://plugins.tapps.design/privacy/" target="_blank" rel="noopener"><?php esc_html_e( 'How this works →', 'meet-with-me' ); ?></a>
 				</p>
-				<a href="<?php echo esc_url( $oauth_url ); ?>" class="button button-primary mwm-gcal-connect-btn">
+				<a href="<?php echo esc_url( $relay_oauth_url ); ?>" class="button button-primary button-hero mwm-gcal-connect-btn">
 					<?php esc_html_e( 'Connect with Google', 'meet-with-me' ); ?>
 				</a>
 			<?php else : ?>
-				<p class="description">
-					<?php esc_html_e( 'Save your Client ID and Client Secret above first, then come back here to connect.', 'meet-with-me' ); ?>
+				<p class="description" style="margin-bottom:16px;">
+					<?php esc_html_e( 'One-click connection is not configured on this site yet. Use your own Google project below instead.', 'meet-with-me' ); ?>
 				</p>
 			<?php endif; ?>
 		</div>
+
+		<!-- Advanced: bring your own Google project -->
+		<details class="mwm-gcal-advanced">
+			<summary><?php esc_html_e( 'Advanced: use your own Google project', 'meet-with-me' ); ?></summary>
+
+			<div class="mwm-card" style="margin-top:16px;">
+				<h2><?php esc_html_e( 'Your Own API Credentials', 'meet-with-me' ); ?></h2>
+				<p class="description" style="margin-bottom:16px;">
+					<?php esc_html_e( 'You need a Google Cloud project with the Calendar API enabled and an OAuth 2.0 client ID. ', 'meet-with-me' ); ?>
+					<a href="<?php echo esc_url( $help_url ); ?>">
+						<?php esc_html_e( 'Step-by-step setup guide →', 'meet-with-me' ); ?>
+					</a>
+				</p>
+
+				<div class="mwm-gcal-redirect-uri">
+					<label><?php esc_html_e( 'Authorised Redirect URI', 'meet-with-me' ); ?></label>
+					<p class="description" style="margin-bottom:6px;"><?php esc_html_e( 'Add this exact URL to your Google OAuth client\'s "Authorised redirect URIs" in Google Cloud Console:', 'meet-with-me' ); ?></p>
+					<code class="mwm-shortcode" data-copy tabindex="0" role="button"><?php echo esc_html( $redirect_uri ); ?></code>
+				</div>
+
+				<table class="form-table" role="presentation" style="margin-top:16px;">
+					<tr>
+						<th><label for="client_id"><?php esc_html_e( 'Client ID', 'meet-with-me' ); ?></label></th>
+						<td>
+							<input type="text" id="client_id" name="client_id" class="large-text"
+								value="<?php echo esc_attr( $settings['client_id'] ); ?>"
+								placeholder="xxxxxxxxxx.apps.googleusercontent.com">
+						</td>
+					</tr>
+					<tr>
+						<th><label for="client_secret"><?php esc_html_e( 'Client Secret', 'meet-with-me' ); ?></label></th>
+						<td>
+							<?php // The stored secret is never echoed back into the page: leave blank to keep it. ?>
+							<input type="password"
+								id="client_secret" name="client_secret" class="regular-text"
+								value=""
+								placeholder="<?php echo $has_secret ? esc_attr( '••••••••••••' ) : esc_attr__( 'Your client secret', 'meet-with-me' ); ?>"
+								autocomplete="new-password" <?php disabled( $has_secret ); ?>>
+							<?php if ( $has_secret ) : ?>
+								<label style="margin-left:8px;">
+									<input type="checkbox" class="mwm-replace-secret-toggle" data-target="#client_secret"> <?php esc_html_e( 'Replace secret', 'meet-with-me' ); ?>
+								</label>
+								<p class="description"><?php esc_html_e( 'A secret is saved. Tick “Replace secret” to enter a new one — saved secrets are never shown again.', 'meet-with-me' ); ?></p>
+							<?php endif; ?>
+						</td>
+					</tr>
+				</table>
+
+				<p class="submit" style="padding-bottom:0;">
+					<button type="submit" name="mwm_save_google" class="button button-secondary">
+						<?php esc_html_e( 'Save Credentials', 'meet-with-me' ); ?>
+					</button>
+				</p>
+			</div>
+
+			<?php if ( $has_credentials && ! $is_connected ) : ?>
+				<div class="mwm-card">
+					<p class="description" style="margin-bottom:16px;">
+						<?php esc_html_e( 'Click below to authorise Meet With Me to read and write your Google Calendar using your own project.', 'meet-with-me' ); ?>
+					</p>
+					<a href="<?php echo esc_url( $oauth_url ); ?>" class="button button-secondary mwm-gcal-connect-btn">
+						<?php esc_html_e( 'Connect with my own credentials', 'meet-with-me' ); ?>
+					</a>
+				</div>
+			<?php endif; ?>
+		</details>
+		<?php endif; ?>
 
 		<!-- Step 3: Calendars (only when connected) -->
 		<?php if ( $is_connected ) : ?>
