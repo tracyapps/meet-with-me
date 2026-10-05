@@ -116,8 +116,19 @@ class MWM_Admin_Google {
 	private function handle_save(): void {
 		check_admin_referer( 'mwm_google_settings' );
 
-		$existing  = MWM_Settings::get_all( 'google' );
-		$client_id = sanitize_text_field( wp_unslash( $_POST['client_id'] ?? '' ) );
+		$existing = MWM_Settings::get_all( 'google' );
+
+		/*
+		 * The Advanced own-credentials fields only print while the site is
+		 * NOT connected (relay-connected sites included). When they are absent
+		 * from the submission this is a calendar-preferences save only — keep
+		 * the existing connection instead of treating the credentials as
+		 * blanked, which would wipe the tokens.
+		 */
+		$credentials_submitted = isset( $_POST['client_id'] );
+		$client_id             = $credentials_submitted
+			? sanitize_text_field( wp_unslash( $_POST['client_id'] ?? '' ) )
+			: (string) ( $existing['client_id'] ?? '' );
 
 		// Never read a stored secret back into HTML: an empty submission keeps
 		// the existing secret, a non-empty submission replaces it.
@@ -132,8 +143,10 @@ class MWM_Admin_Google {
 			return;
 		}
 
-		$credentials_changed = $client_id !== ( $existing['client_id'] ?? '' )
-			|| $client_secret !== ( $existing['client_secret'] ?? '' );
+		$credentials_changed = $credentials_submitted && (
+			$client_id !== ( $existing['client_id'] ?? '' )
+			|| $client_secret !== ( $existing['client_secret'] ?? '' )
+		);
 
 		// Save credentials
 		$updates = array(
