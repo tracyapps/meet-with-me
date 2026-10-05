@@ -3,12 +3,42 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$general_url = add_query_arg( [ 'page' => 'mwm-settings', 'tab' => 'general' ], admin_url( 'admin.php' ) );
-$avail_url   = add_query_arg( [ 'page' => 'mwm-settings', 'tab' => 'availability' ], admin_url( 'admin.php' ) );
-$types_url   = add_query_arg( [ 'page' => 'mwm-event-types' ], admin_url( 'admin.php' ) );
-$google_url  = add_query_arg( [ 'page' => 'mwm-settings', 'tab' => 'google' ], admin_url( 'admin.php' ) );
-$zoom_url    = add_query_arg( [ 'page' => 'mwm-settings', 'tab' => 'meetings' ], admin_url( 'admin.php' ) );
-$style_url   = add_query_arg( [ 'page' => 'mwm-settings', 'tab' => 'style' ], admin_url( 'admin.php' ) );
+$general_url = add_query_arg(
+	array(
+		'page' => 'mwm-settings',
+		'tab'  => 'general',
+	),
+	admin_url( 'admin.php' )
+);
+$avail_url   = add_query_arg(
+	array(
+		'page' => 'mwm-settings',
+		'tab'  => 'availability',
+	),
+	admin_url( 'admin.php' )
+);
+$types_url   = add_query_arg( array( 'page' => 'mwm-event-types' ), admin_url( 'admin.php' ) );
+$google_url  = add_query_arg(
+	array(
+		'page' => 'mwm-settings',
+		'tab'  => 'google',
+	),
+	admin_url( 'admin.php' )
+);
+$zoom_url    = add_query_arg(
+	array(
+		'page' => 'mwm-settings',
+		'tab'  => 'meetings',
+	),
+	admin_url( 'admin.php' )
+);
+$style_url   = add_query_arg(
+	array(
+		'page' => 'mwm-settings',
+		'tab'  => 'style',
+	),
+	admin_url( 'admin.php' )
+);
 ?>
 <div class="wrap mwm-settings-wrap">
 

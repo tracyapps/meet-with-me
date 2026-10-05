@@ -17,14 +17,14 @@ function mwm_uninstall_site(): void {
 	global $wpdb;
 
 	// Remove all plugin options.
-	$options = [
+	$options = array(
 		'mwm_general',
 		'mwm_google',
 		'mwm_meetings',
 		'mwm_email',
 		'mwm_style',
 		'mwm_db_version',
-	];
+	);
 
 	foreach ( $options as $option ) {
 		delete_option( $option );
@@ -39,24 +39,24 @@ function mwm_uninstall_site(): void {
 	); // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL
 
 	// Drop all plugin tables.
-	$tables = [
+	$tables = array(
 		$wpdb->prefix . 'mwm_event_types',
 		$wpdb->prefix . 'mwm_bookings',
 		$wpdb->prefix . 'mwm_availability_rules',
 		$wpdb->prefix . 'mwm_blocked_dates',
-	];
+	);
 
 	foreach ( $tables as $table ) {
-		$wpdb->query( "DROP TABLE IF EXISTS {$table}" ); // phpcs:ignore WordPress.DB.PreparedSQL
+		$wpdb->query( "DROP TABLE IF EXISTS {$table}" ); // phpcs:ignore WordPress.DB.PreparedSQL, WordPress.DB.DirectDatabaseQuery.SchemaChange -- uninstall must remove tables
 	}
 }
 
 if ( is_multisite() ) {
 	$mwm_site_ids = get_sites(
-		[
+		array(
 			'fields' => 'ids',
 			'number' => 0, // No limit.
-		]
+		)
 	);
 
 	foreach ( $mwm_site_ids as $mwm_site_id ) {

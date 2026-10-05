@@ -22,11 +22,11 @@ class MWM_Blocks {
 	 * @return array<string, callable>
 	 */
 	private static function block_map(): array {
-		return [
-			'booking-form' => [ __CLASS__, 'render_booking_form' ],
-			'button'       => [ __CLASS__, 'render_button' ],
-			'cards'        => [ __CLASS__, 'render_cards' ],
-		];
+		return array(
+			'booking-form' => array( __CLASS__, 'render_booking_form' ),
+			'button'       => array( __CLASS__, 'render_button' ),
+			'cards'        => array( __CLASS__, 'render_cards' ),
+		);
 	}
 
 	/**
@@ -34,8 +34,8 @@ class MWM_Blocks {
 	 * block registration must happen everywhere.
 	 */
 	public static function init(): void {
-		add_action( 'init', [ __CLASS__, 'register_blocks' ] );
-		add_filter( 'block_categories_all', [ __CLASS__, 'register_category' ], 10, 2 );
+		add_action( 'init', array( __CLASS__, 'register_blocks' ) );
+		add_filter( 'block_categories_all', array( __CLASS__, 'register_category' ), 10, 2 );
 	}
 
 	/**
@@ -52,7 +52,7 @@ class MWM_Blocks {
 		foreach ( self::block_map() as $folder => $callback ) {
 			$block_type = register_block_type_from_metadata(
 				MWM_PLUGIN_DIR . 'blocks/' . $folder,
-				[ 'render_callback' => $callback ]
+				array( 'render_callback' => $callback )
 			);
 
 			if ( $block_type instanceof WP_Block_Type && ! empty( $block_type->editor_script_handles ) && is_admin() ) {
@@ -68,18 +68,17 @@ class MWM_Blocks {
 	/**
 	 * Add the "Meet With Me" block category.
 	 *
-	 * @param array $categories           Existing block categories.
-	 * @param mixed $block_editor_context Editor context (unused).
+	 * @param array $categories Existing block categories.
 	 * @return array
 	 */
-	public static function register_category( $categories, $block_editor_context ): array {
+	public static function register_category( $categories ): array {
 		array_unshift(
 			$categories,
-			[
+			array(
 				'slug'  => 'meet-with-me',
 				'title' => __( 'Meet With Me', 'meet-with-me' ),
 				'icon'  => null,
-			]
+			)
 		);
 
 		return $categories;
@@ -98,13 +97,13 @@ class MWM_Blocks {
 		MWM_Public::ensure_assets();
 
 		$inner = self::renderer()->shortcode_booking_form(
-			[
+			array(
 				'event_type' => $slug,
 				'accent'     => $accent,
-			]
+			)
 		);
 
-		return '<div ' . get_block_wrapper_attributes( [ 'class' => 'mwm-block mwm-block--booking-form' ] ) . '>'
+		return '<div ' . get_block_wrapper_attributes( array( 'class' => 'mwm-block mwm-block--booking-form' ) ) . '>'
 			. $inner
 			. '</div>';
 	}
@@ -122,17 +121,17 @@ class MWM_Blocks {
 
 		MWM_Public::ensure_assets();
 
-		$atts = [
+		$atts = array(
 			'event_type' => $slug,
 			'accent'     => $accent,
-		];
+		);
 
 		// Let the shortcode renderer apply its default label when none is set.
 		if ( '' !== $label ) {
 			$atts['label'] = $label;
 		}
 
-		return '<div ' . get_block_wrapper_attributes( [ 'class' => 'mwm-block mwm-block--button' ] ) . '>'
+		return '<div ' . get_block_wrapper_attributes( array( 'class' => 'mwm-block mwm-block--button' ) ) . '>'
 			. self::renderer()->shortcode_button( $atts )
 			. '</div>';
 	}
@@ -144,7 +143,7 @@ class MWM_Blocks {
 	 * @return string
 	 */
 	public static function render_cards( $attributes ): string {
-		$types = [];
+		$types = array();
 		if ( isset( $attributes['eventTypes'] ) && is_array( $attributes['eventTypes'] ) ) {
 			foreach ( $attributes['eventTypes'] as $slug ) {
 				if ( is_string( $slug ) && '' !== $slug ) {
@@ -160,15 +159,15 @@ class MWM_Blocks {
 		MWM_Public::ensure_assets();
 
 		$inner = self::renderer()->shortcode_cards(
-			[
+			array(
 				'event_types'      => implode( ',', $types ),
 				'columns'          => (string) $columns,
 				'show_description' => $show ? 'true' : 'false',
 				'accent'           => $accent,
-			]
+			)
 		);
 
-		return '<div ' . get_block_wrapper_attributes( [ 'class' => 'mwm-block mwm-block--cards' ] ) . '>'
+		return '<div ' . get_block_wrapper_attributes( array( 'class' => 'mwm-block mwm-block--cards' ) ) . '>'
 			. $inner
 			. '</div>';
 	}
@@ -186,7 +185,7 @@ class MWM_Blocks {
 			return $data;
 		}
 
-		$event_types = [];
+		$event_types = array();
 		foreach ( MWM_Event_Type::get_all( true ) as $event_type ) {
 			$label = $event_type['name'];
 
@@ -199,18 +198,18 @@ class MWM_Blocks {
 				);
 			}
 
-			$event_types[] = [
+			$event_types[] = array(
 				'id'    => (int) $event_type['id'],
 				'slug'  => sanitize_key( (string) $event_type['slug'] ),
 				'name'  => sanitize_text_field( (string) $event_type['name'] ),
 				'label' => sanitize_text_field( $label ),
-			];
+			);
 		}
 
-		$data = [
+		$data = array(
 			'eventTypes' => $event_types,
 			'newTypeUrl' => esc_url_raw( admin_url( 'admin.php?page=mwm-event-types' ) ),
-		];
+		);
 
 		return $data;
 	}

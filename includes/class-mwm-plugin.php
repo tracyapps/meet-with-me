@@ -42,13 +42,13 @@ class MWM_Plugin {
 	}
 
 	private function init_hooks(): void {
-		add_action( 'init',             [ $this, 'maybe_upgrade_db' ], 1 );
-		add_action( 'init',             [ $this, 'load_textdomain' ] );
-		add_action( 'rest_api_init',       [ $this, 'register_rest_routes' ] );
-		add_action( 'admin_init',          [ $this, 'add_privacy_policy_content' ] );
-		add_action( 'mwm_booking_confirmed',   [ $this, 'on_booking_confirmed' ],   10, 2 );
-		add_action( 'mwm_booking_cancelled',   [ $this, 'on_booking_cancelled' ],   10, 2 );
-		add_action( 'mwm_booking_rescheduled', [ $this, 'on_booking_rescheduled' ], 10, 3 );
+		add_action( 'init', array( $this, 'maybe_upgrade_db' ), 1 );
+		add_action( 'init', array( $this, 'load_textdomain' ) );
+		add_action( 'rest_api_init', array( $this, 'register_rest_routes' ) );
+		add_action( 'admin_init', array( $this, 'add_privacy_policy_content' ) );
+		add_action( 'mwm_booking_confirmed', array( $this, 'on_booking_confirmed' ), 10, 2 );
+		add_action( 'mwm_booking_cancelled', array( $this, 'on_booking_cancelled' ), 10, 2 );
+		add_action( 'mwm_booking_rescheduled', array( $this, 'on_booking_rescheduled' ), 10, 3 );
 
 		if ( is_admin() ) {
 			( new MWM_Admin() )->init();
@@ -64,50 +64,74 @@ class MWM_Plugin {
 		$booking = $this->maybe_prepare_online_meeting( $booking, $event_type );
 		$booking = $this->maybe_sync_google_calendar( $booking, $event_type );
 
-		$this->safe_side_effect( 'booking confirmation email', function () use ( $booking, $event_type ) {
-			( new MWM_Email() )->send_confirmation( $booking, $event_type );
-		} );
+		$this->safe_side_effect(
+			'booking confirmation email',
+			function () use ( $booking, $event_type ) {
+				( new MWM_Email() )->send_confirmation( $booking, $event_type );
+			}
+		);
 
-		$this->safe_side_effect( 'admin booking notification', function () use ( $booking, $event_type ) {
-			( new MWM_Email() )->send_admin_notification( $booking, $event_type );
-		} );
+		$this->safe_side_effect(
+			'admin booking notification',
+			function () use ( $booking, $event_type ) {
+				( new MWM_Email() )->send_admin_notification( $booking, $event_type );
+			}
+		);
 	}
 
 	public function on_booking_cancelled( array $booking, array $event_type ): void {
-		$this->safe_side_effect( 'booking cancellation email', function () use ( $booking, $event_type ) {
-			( new MWM_Email() )->send_cancellation( $booking, $event_type );
-		} );
+		$this->safe_side_effect(
+			'booking cancellation email',
+			function () use ( $booking, $event_type ) {
+				( new MWM_Email() )->send_cancellation( $booking, $event_type );
+			}
+		);
 
-		$this->safe_side_effect( 'online meeting cleanup', function () use ( $booking ) {
-			MWM_Online_Meetings::delete_for_booking( $booking );
-		} );
+		$this->safe_side_effect(
+			'online meeting cleanup',
+			function () use ( $booking ) {
+				MWM_Online_Meetings::delete_for_booking( $booking );
+			}
+		);
 
 		if ( MWM_Google_Calendar::is_connected() && ! empty( $booking['gcal_event_id'] ) ) {
-			$this->safe_side_effect( 'Google Calendar delete event', function () use ( $booking ) {
-				MWM_Google_Calendar::delete_event( $booking['gcal_event_id'] );
-			} );
+			$this->safe_side_effect(
+				'Google Calendar delete event',
+				function () use ( $booking ) {
+					MWM_Google_Calendar::delete_event( $booking['gcal_event_id'] );
+				}
+			);
 		}
 	}
 
 	public function on_booking_rescheduled( array $new_booking, array $old_booking, array $event_type ): void {
-		$this->safe_side_effect( 'online meeting cleanup', function () use ( $old_booking ) {
-			MWM_Online_Meetings::delete_for_booking( $old_booking );
-		} );
+		$this->safe_side_effect(
+			'online meeting cleanup',
+			function () use ( $old_booking ) {
+				MWM_Online_Meetings::delete_for_booking( $old_booking );
+			}
+		);
 
 		if ( MWM_Google_Calendar::is_connected() ) {
-			$this->safe_side_effect( 'Google Calendar reschedule sync', function () use ( $new_booking, $old_booking, $event_type ) {
-				if ( ! empty( $old_booking['gcal_event_id'] ) ) {
-					MWM_Google_Calendar::delete_event( $old_booking['gcal_event_id'] );
+			$this->safe_side_effect(
+				'Google Calendar reschedule sync',
+				function () use ( $new_booking, $old_booking, $event_type ) {
+					if ( ! empty( $old_booking['gcal_event_id'] ) ) {
+						MWM_Google_Calendar::delete_event( $old_booking['gcal_event_id'] );
+					}
 				}
-			} );
+			);
 		}
 
 		$new_booking = $this->maybe_prepare_online_meeting( $new_booking, $event_type );
 		$new_booking = $this->maybe_sync_google_calendar( $new_booking, $event_type );
 
-		$this->safe_side_effect( 'booking reschedule email', function () use ( $new_booking, $event_type ) {
-			( new MWM_Email() )->send_reschedule_confirmation( $new_booking, $event_type );
-		} );
+		$this->safe_side_effect(
+			'booking reschedule email',
+			function () use ( $new_booking, $event_type ) {
+				( new MWM_Email() )->send_reschedule_confirmation( $new_booking, $event_type );
+			}
+		);
 	}
 
 	public function register_rest_routes(): void {
@@ -122,7 +146,7 @@ class MWM_Plugin {
 			return;
 		}
 
-		$content = '<p>' . esc_html__( 'Meet With Me stores booking information submitted through its booking forms: the booker’s name, email address, optional phone number and notes, answers to any custom booking questions, the chosen meeting time, and the booker’s timezone.', 'meet-with-me' ) . '</p>';
+		$content  = '<p>' . esc_html__( 'Meet With Me stores booking information submitted through its booking forms: the booker’s name, email address, optional phone number and notes, answers to any custom booking questions, the chosen meeting time, and the booker’s timezone.', 'meet-with-me' ) . '</p>';
 		$content .= '<p>' . esc_html__( 'This information is used solely to schedule and manage the requested meeting, to send booking notifications, and to manage cancellations and reschedules. It is stored in the site’s WordPress database and retained until an administrator deletes the booking or uninstalls the plugin.', 'meet-with-me' ) . '</p>';
 		$content .= '<p>' . esc_html__( 'If Google Calendar or Zoom integrations are enabled, meeting details are shared with those services as needed to create calendar events and online meeting links. Bookers can request deletion of their data by contacting the site owner.', 'meet-with-me' ) . '</p>';
 
@@ -141,19 +165,22 @@ class MWM_Plugin {
 		try {
 			$callback();
 		} catch ( \Throwable $e ) {
-			error_log( '[Meet With Me] ' . $label . ' failed: ' . $e->getMessage() );
+			error_log( '[Meet With Me] ' . $label . ' failed: ' . $e->getMessage() ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- deliberate failure log
 		}
 	}
 
 	private function maybe_prepare_online_meeting( array $booking, array $event_type ): array {
 		$updates = null;
 
-		$this->safe_side_effect( 'online meeting provisioning', function () use ( $booking, $event_type, &$updates ) {
-			$updates = MWM_Online_Meetings::create_for_booking( $booking, $event_type );
-			if ( is_array( $updates ) && ! empty( $updates ) ) {
-				MWM_Booking::update( $booking['id'], $updates );
+		$this->safe_side_effect(
+			'online meeting provisioning',
+			function () use ( $booking, $event_type, &$updates ) {
+				$updates = MWM_Online_Meetings::create_for_booking( $booking, $event_type );
+				if ( is_array( $updates ) && ! empty( $updates ) ) {
+					MWM_Booking::update( $booking['id'], $updates );
+				}
 			}
-		} );
+		);
 
 		if ( is_array( $updates ) && ! empty( $updates ) ) {
 			$fresh = MWM_Booking::get( $booking['id'] );
@@ -171,12 +198,15 @@ class MWM_Plugin {
 		}
 
 		$gcal_id = false;
-		$this->safe_side_effect( 'Google Calendar create event', function () use ( $booking, $event_type, &$gcal_id ) {
-			$gcal_id = MWM_Google_Calendar::create_event( $booking, $event_type );
-			if ( $gcal_id ) {
-				MWM_Booking::update( $booking['id'], [ 'gcal_event_id' => $gcal_id ] );
+		$this->safe_side_effect(
+			'Google Calendar create event',
+			function () use ( $booking, $event_type, &$gcal_id ) {
+				$gcal_id = MWM_Google_Calendar::create_event( $booking, $event_type );
+				if ( $gcal_id ) {
+					MWM_Booking::update( $booking['id'], array( 'gcal_event_id' => $gcal_id ) );
+				}
 			}
-		} );
+		);
 
 		if ( $gcal_id ) {
 			$fresh = MWM_Booking::get( $booking['id'] );
@@ -206,8 +236,8 @@ class MWM_Plugin {
  *
  * @param string $current Active tab key.
  */
-function mwm_admin_tabs( string $current ): void {
-	$tabs = [
+function mwm_admin_tabs( string $current ): void { // phpcs:ignore Universal.Files.SeparateFunctionsFromOO.Mixed -- shared template helpers
+	$tabs = array(
 		'general'      => __( 'General', 'meet-with-me' ),
 		'availability' => __( 'Availability', 'meet-with-me' ),
 		'google'       => __( 'Google Calendar', 'meet-with-me' ),
@@ -215,10 +245,16 @@ function mwm_admin_tabs( string $current ): void {
 		'email'        => __( 'Email Templates', 'meet-with-me' ),
 		'style'        => __( 'Style', 'meet-with-me' ),
 		'help'         => __( 'Help & Setup', 'meet-with-me' ),
-	];
+	);
 	echo '<nav class="nav-tab-wrapper" aria-label="' . esc_attr__( 'Settings tabs', 'meet-with-me' ) . '">';
 	foreach ( $tabs as $key => $label ) {
-		$url   = add_query_arg( [ 'page' => 'mwm-settings', 'tab' => $key ], admin_url( 'admin.php' ) );
+		$url   = add_query_arg(
+			array(
+				'page' => 'mwm-settings',
+				'tab'  => $key,
+			),
+			admin_url( 'admin.php' )
+		);
 		$class = 'nav-tab' . ( $current === $key ? ' nav-tab-active' : '' );
 		printf(
 			'<a href="%s" class="%s"%s>%s</a>',
@@ -238,12 +274,24 @@ function mwm_admin_tabs( string $current ): void {
  * @return string  Safe HTML string.
  */
 function mwm_booking_status_badge( string $status ): string {
-	$map = [
-		'confirmed'   => [ 'class' => 'mwm-badge--active',      'label' => __( 'Confirmed',   'meet-with-me' ) ],
-		'cancelled'   => [ 'class' => 'mwm-badge--cancelled',   'label' => __( 'Cancelled',   'meet-with-me' ) ],
-		'rescheduled' => [ 'class' => 'mwm-badge--rescheduled', 'label' => __( 'Rescheduled', 'meet-with-me' ) ],
-	];
-	$entry = $map[ $status ] ?? [ 'class' => '', 'label' => ucfirst( $status ) ];
+	$map   = array(
+		'confirmed'   => array(
+			'class' => 'mwm-badge--active',
+			'label' => __( 'Confirmed', 'meet-with-me' ),
+		),
+		'cancelled'   => array(
+			'class' => 'mwm-badge--cancelled',
+			'label' => __( 'Cancelled', 'meet-with-me' ),
+		),
+		'rescheduled' => array(
+			'class' => 'mwm-badge--rescheduled',
+			'label' => __( 'Rescheduled', 'meet-with-me' ),
+		),
+	);
+	$entry = $map[ $status ] ?? array(
+		'class' => '',
+		'label' => ucfirst( $status ),
+	);
 	return sprintf(
 		'<span class="mwm-badge %s">%s</span>',
 		esc_attr( $entry['class'] ),

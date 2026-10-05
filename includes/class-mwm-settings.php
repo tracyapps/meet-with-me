@@ -14,47 +14,47 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class MWM_Settings {
 
-	private static array $cache = [];
+	private static array $cache = array();
 
-	private static array $defaults = [
-		'general' => [
+	private static array $defaults = array(
+		'general'  => array(
 			'timezone'         => 'UTC',
 			'admin_name'       => '',
 			'admin_email'      => '',
 			'min_notice_hours' => 24,
 			'max_advance_days' => 60,
-		],
-		'google' => [
+		),
+		'google'   => array(
 			'client_id'              => '',
 			'client_secret'          => '',
 			'access_token'           => '',
 			'refresh_token'          => '',
 			'token_expiry'           => 0,
-			'calendar_ids'           => [],
+			'calendar_ids'           => array(),
 			'write_back_calendar_id' => '',
-		],
-		'meetings' => [
-			'zoom_account_id'        => '',
-			'zoom_client_id'         => '',
-			'zoom_client_secret'     => '',
-			'zoom_user_id'           => 'me',
-			'zoom_default_password'  => '',
-			'zoom_waiting_room'      => 0,
-			'zoom_join_before_host'  => 0,
-		],
-		'email' => [
-			'from_name'             => '',
-			'from_email'            => '',
-			'confirmation_subject'  => '',
-			'confirmation_body'     => '',
-			'admin_subject'         => '',
-			'admin_body'            => '',
-			'cancellation_subject'  => '',
-			'cancellation_body'     => '',
-			'reschedule_subject'    => '',
-			'reschedule_body'       => '',
-		],
-		'style' => [
+		),
+		'meetings' => array(
+			'zoom_account_id'       => '',
+			'zoom_client_id'        => '',
+			'zoom_client_secret'    => '',
+			'zoom_user_id'          => 'me',
+			'zoom_default_password' => '',
+			'zoom_waiting_room'     => 0,
+			'zoom_join_before_host' => 0,
+		),
+		'email'    => array(
+			'from_name'            => '',
+			'from_email'           => '',
+			'confirmation_subject' => '',
+			'confirmation_body'    => '',
+			'admin_subject'        => '',
+			'admin_body'           => '',
+			'cancellation_subject' => '',
+			'cancellation_body'    => '',
+			'reschedule_subject'   => '',
+			'reschedule_body'      => '',
+		),
+		'style'    => array(
 			'accent_color'      => '',
 			'accent_text_color' => '',
 			'button_style'      => 'outline',
@@ -63,8 +63,8 @@ class MWM_Settings {
 			'density'           => 'comfortable',
 			'max_width'         => 560,
 			'custom_css'        => '',
-		],
-	];
+		),
+	);
 
 	/**
 	 * Get a single setting value.
@@ -79,10 +79,10 @@ class MWM_Settings {
 	 */
 	public static function get_all( string $group = 'general' ): array {
 		if ( ! isset( self::$cache[ $group ] ) ) {
-			$stored = get_option( "mwm_{$group}", [] );
+			$stored                = get_option( "mwm_{$group}", array() );
 			self::$cache[ $group ] = array_merge(
-				self::$defaults[ $group ] ?? [],
-				is_array( $stored ) ? $stored : []
+				self::$defaults[ $group ] ?? array(),
+				is_array( $stored ) ? $stored : array()
 			);
 		}
 		return self::$cache[ $group ];
@@ -92,8 +92,8 @@ class MWM_Settings {
 	 * Set a single setting value.
 	 */
 	public static function set( string $key, mixed $value, string $group = 'general' ): bool {
-		$all         = self::get_all( $group );
-		$all[ $key ] = $value;
+		$all                   = self::get_all( $group );
+		$all[ $key ]           = $value;
 		self::$cache[ $group ] = $all;
 		return (bool) update_option( "mwm_{$group}", $all );
 	}
@@ -114,7 +114,7 @@ class MWM_Settings {
 		if ( $group ) {
 			unset( self::$cache[ $group ] );
 		} else {
-			self::$cache = [];
+			self::$cache = array();
 		}
 	}
 }

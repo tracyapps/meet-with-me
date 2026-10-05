@@ -27,8 +27,8 @@ require_once MWM_PLUGIN_DIR . 'includes/class-mwm-install.php';
 require_once MWM_PLUGIN_DIR . 'includes/class-mwm-settings.php';
 require_once MWM_PLUGIN_DIR . 'includes/class-mwm-plugin.php';
 
-register_activation_hook( __FILE__, [ 'MWM_Install', 'activate' ] );
-register_deactivation_hook( __FILE__, [ 'MWM_Install', 'deactivate' ] );
+register_activation_hook( __FILE__, array( 'MWM_Install', 'activate' ) );
+register_deactivation_hook( __FILE__, array( 'MWM_Install', 'deactivate' ) );
 
 function mwm(): MWM_Plugin {
 	return MWM_Plugin::instance();

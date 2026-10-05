@@ -13,7 +13,7 @@ class MWM_Admin_Style {
 			wp_die( esc_html__( 'Permission denied.', 'meet-with-me' ) );
 		}
 
-		if ( isset( $_POST['mwm_save_style'] ) ) {
+		if ( isset( $_POST['mwm_save_style'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce verified inside the handler
 			$this->handle_save();
 		}
 
@@ -23,32 +23,40 @@ class MWM_Admin_Style {
 	private function handle_save(): void {
 		check_admin_referer( 'mwm_style_settings' );
 
-		$button_styles = [ 'outline', 'filled', 'link' ];
-		$surface_modes = [ 'theme', 'light', 'dark' ];
-		$densities     = [ 'comfortable', 'compact' ];
+		$button_styles = array( 'outline', 'filled', 'link' );
+		$surface_modes = array( 'theme', 'light', 'dark' );
+		$densities     = array( 'comfortable', 'compact' );
 
-		$button_style = sanitize_key( $_POST['button_style'] ?? 'outline' );
-		$surface_mode = sanitize_key( $_POST['surface_mode'] ?? 'theme' );
-		$density      = sanitize_key( $_POST['density'] ?? 'comfortable' );
+		$button_style = sanitize_key( wp_unslash( $_POST['button_style'] ?? 'outline' ) );
+		$surface_mode = sanitize_key( wp_unslash( $_POST['surface_mode'] ?? 'theme' ) );
+		$density      = sanitize_key( wp_unslash( $_POST['density'] ?? 'comfortable' ) );
 
-		MWM_Settings::set_group( [
-			'accent_color'      => sanitize_hex_color( wp_unslash( $_POST['accent_color'] ?? '' ) ) ?: '',
-			'accent_text_color' => sanitize_hex_color( wp_unslash( $_POST['accent_text_color'] ?? '' ) ) ?: '',
-			'button_style'      => in_array( $button_style, $button_styles, true ) ? $button_style : 'outline',
-			'button_radius'     => $this->sanitize_radius( $_POST['button_radius'] ?? '' ),
-			'surface_mode'      => in_array( $surface_mode, $surface_modes, true ) ? $surface_mode : 'theme',
-			'density'           => in_array( $density, $densities, true ) ? $density : 'comfortable',
-			'max_width'         => max( 320, min( 1200, (int) ( $_POST['max_width'] ?? 560 ) ) ),
-			'custom_css'        => $this->sanitize_custom_css( $_POST['custom_css'] ?? '' ),
-		], 'style' );
+		MWM_Settings::set_group(
+			array(
+				'accent_color'      => sanitize_hex_color( wp_unslash( $_POST['accent_color'] ?? '' ) ) ?: '',
+				'accent_text_color' => sanitize_hex_color( wp_unslash( $_POST['accent_text_color'] ?? '' ) ) ?: '',
+				'button_style'      => in_array( $button_style, $button_styles, true ) ? $button_style : 'outline',
+				'button_radius'     => $this->sanitize_radius( wp_unslash( $_POST['button_radius'] ?? '' ) ), // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- plugin sanitizer
+				'surface_mode'      => in_array( $surface_mode, $surface_modes, true ) ? $surface_mode : 'theme',
+				'density'           => in_array( $density, $densities, true ) ? $density : 'comfortable',
+				'max_width'         => max( 320, min( 1200, absint( wp_unslash( $_POST['max_width'] ?? 560 ) ) ) ),
+				'custom_css'        => $this->sanitize_custom_css( wp_unslash( $_POST['custom_css'] ?? '' ) ), // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- plugin sanitizer
+			),
+			'style'
+		);
 
 		MWM_Settings::flush_cache( 'style' );
 
-		wp_safe_redirect( add_query_arg( [
-			'page'         => 'mwm-settings',
-			'tab'          => 'style',
-			'style_status' => 'saved',
-		], admin_url( 'admin.php' ) ) );
+		wp_safe_redirect(
+			add_query_arg(
+				array(
+					'page'         => 'mwm-settings',
+					'tab'          => 'style',
+					'style_status' => 'saved',
+				),
+				admin_url( 'admin.php' )
+			)
+		);
 		exit;
 	}
 
@@ -91,10 +99,15 @@ class MWM_Admin_Style {
 	}
 
 	private function get_notice(): ?array {
-		$status = sanitize_key( $_GET['style_status'] ?? '' );
-		if ( ! $status ) return null;
+		$status = sanitize_key( wp_unslash( $_GET['style_status'] ?? '' ) );
+		if ( ! $status ) {
+			return null;
+		}
 		return match ( $status ) {
-			'saved' => [ 'type' => 'success', 'message' => __( 'Style settings saved.', 'meet-with-me' ) ],
+			'saved' => array(
+				'type'    => 'success',
+				'message' => __( 'Style settings saved.', 'meet-with-me' ),
+			),
 			default => null,
 		};
 	}

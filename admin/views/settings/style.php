@@ -3,7 +3,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$radius_options = [
+$radius_options = array(
 	''     => __( 'Theme default', 'meet-with-me' ),
 	'0'    => '0 px',
 	'2'    => '2 px',
@@ -19,7 +19,7 @@ $radius_options = [
 	'22'   => '22 px',
 	'24'   => '24 px',
 	'pill' => __( 'Pill (fully rounded)', 'meet-with-me' ),
-];
+);
 
 // Static preview styles built from the saved values.
 $preview_style = '';

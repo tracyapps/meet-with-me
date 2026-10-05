@@ -3,16 +3,29 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$disconnect_url = wp_nonce_url(
-	add_query_arg( [ 'page' => 'mwm-settings', 'tab' => 'google', 'mwm_google_action' => 'disconnect' ], admin_url( 'admin.php' ) ),
+$disconnect_url     = wp_nonce_url(
+	add_query_arg(
+		array(
+			'page'              => 'mwm-settings',
+			'tab'               => 'google',
+			'mwm_google_action' => 'disconnect',
+		),
+		admin_url( 'admin.php' )
+	),
 	'mwm_google_disconnect'
 );
-$oauth_url = $has_credentials ? MWM_Google_Calendar::get_oauth_url() : '#';
-$selected_ids = array_values( array_filter( (array) ( $settings['calendar_ids'] ?? [] ) ) );
-$write_back_id = (string) ( $settings['write_back_calendar_id'] ?? '' );
-$has_secret = ! empty( $settings['client_secret'] );
-$help_url = add_query_arg( [ 'page' => 'mwm-settings', 'tab' => 'help' ], admin_url( 'admin.php' ) ) . '#mwm-help-google';
-$writable_calendars = [];
+$oauth_url          = $has_credentials ? MWM_Google_Calendar::get_oauth_url() : '#';
+$selected_ids       = array_values( array_filter( (array) ( $settings['calendar_ids'] ?? array() ) ) );
+$write_back_id      = (string) ( $settings['write_back_calendar_id'] ?? '' );
+$has_secret         = ! empty( $settings['client_secret'] );
+$help_url           = add_query_arg(
+	array(
+		'page' => 'mwm-settings',
+		'tab'  => 'help',
+	),
+	admin_url( 'admin.php' )
+) . '#mwm-help-google';
+$writable_calendars = array();
 
 foreach ( $calendar_list as $calendar ) {
 	if ( ! empty( $calendar['writable'] ) ) {
@@ -46,7 +59,7 @@ if ( $is_connected ) {
 	$token_expiry = (int) ( $settings['token_expiry'] ?? 0 );
 	if ( $token_expiry > 0 ) {
 		/* translators: %s = date/time */
-		$renewal = sprintf( __( 'Access token refreshes automatically (next renewal by %s)', 'meet-with-me' ), wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $token_expiry ) );
+		$renewal            = sprintf( __( 'Access token refreshes automatically (next renewal by %s)', 'meet-with-me' ), wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $token_expiry ) );
 		$connected_summary .= ( $connected_summary ? ' · ' : '' ) . $renewal;
 	}
 }
@@ -75,8 +88,8 @@ if ( $is_connected ) {
 					<?php endif; ?>
 				</span>
 				<a href="<?php echo esc_url( $disconnect_url ); ?>"
-				   class="button mwm-gcal-disconnect"
-				   onclick="return confirm('<?php esc_attr_e( 'Disconnect from Google Calendar? Your existing bookings will not be affected, but new ones will no longer sync.', 'meet-with-me' ); ?>')">
+					class="button mwm-gcal-disconnect"
+					onclick="return confirm('<?php esc_attr_e( 'Disconnect from Google Calendar? Your existing bookings will not be affected, but new ones will no longer sync.', 'meet-with-me' ); ?>')">
 					<?php esc_html_e( 'Disconnect', 'meet-with-me' ); ?>
 				</a>
 			</div>
@@ -188,7 +201,7 @@ if ( $is_connected ) {
 						<?php foreach ( $calendar_list as $calendar ) : ?>
 							<?php
 							$is_checked = in_array( $calendar['id'], $selected_ids, true ) || ( empty( $selected_ids ) && ! empty( $calendar['primary'] ) );
-							$classes = 'mwm-calendar-check';
+							$classes    = 'mwm-calendar-check';
 							if ( ! empty( $calendar['primary'] ) ) {
 								$classes .= ' mwm-calendar-check--primary';
 							}
