@@ -72,7 +72,7 @@ class MWM_ICS_Test extends WP_UnitTestCase {
 		$host = parse_url( home_url(), PHP_URL_HOST ) ?: 'localhost';
 
 		$this->assertMatchesRegularExpression(
-			'/UID:mwm-booking-7-[0-9a-f]{32}@' . preg_quote( $host, '/' ) . "/\r\n/",
+			'/UID:mwm-booking-7-[0-9a-f]{32}@' . preg_quote( $host, '/' ) . '\r\n/',
 			$ics
 		);
 	}
