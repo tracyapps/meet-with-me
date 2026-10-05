@@ -1,0 +1,24 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "meet-with-me/booking-form",
+	"title": "Booking Form",
+	"category": "meet-with-me",
+	"icon": "calendar-alt",
+	"description": "The full booking wizard rendered inline — the same as the [mwm_booking_form] shortcode.",
+	"keywords": [ "booking", "appointment", "calendar", "scheduling", "form", "meet" ],
+	"textdomain": "meet-with-me",
+	"attributes": {
+		"eventType": { "type": "string", "default": "" },
+		"accentColor": { "type": "string", "default": "" }
+	},
+	"supports": {
+		"html": false,
+		"anchor": true
+	},
+	"example": {
+		"attributes": {}
+	},
+	"editorScript": "file:./block-editor.js",
+	"style": "meet-with-me"
+}

@@ -1,0 +1,25 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "meet-with-me/button",
+	"title": "Booking Button",
+	"category": "meet-with-me",
+	"icon": "button",
+	"description": "A button that opens the booking wizard in a modal — the same as the [mwm_button] shortcode.",
+	"keywords": [ "booking", "button", "appointment", "modal", "meet" ],
+	"textdomain": "meet-with-me",
+	"attributes": {
+		"label": { "type": "string", "default": "" },
+		"eventType": { "type": "string", "default": "" },
+		"accentColor": { "type": "string", "default": "" }
+	},
+	"supports": {
+		"html": false,
+		"anchor": true
+	},
+	"example": {
+		"attributes": {}
+	},
+	"editorScript": "file:./block-editor.js",
+	"style": "meet-with-me"
+}

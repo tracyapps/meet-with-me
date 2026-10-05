@@ -1,0 +1,26 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "meet-with-me/cards",
+	"title": "Meeting Type Cards",
+	"category": "meet-with-me",
+	"icon": "grid-view",
+	"description": "A grid of meeting type cards, each with a Book Now button — the same as the [mwm_cards] shortcode.",
+	"keywords": [ "booking", "cards", "meeting types", "grid", "meet" ],
+	"textdomain": "meet-with-me",
+	"attributes": {
+		"eventTypes": { "type": "array", "items": { "type": "string" }, "default": [] },
+		"columns": { "type": "number", "default": 3 },
+		"showDescription": { "type": "boolean", "default": true },
+		"accentColor": { "type": "string", "default": "" }
+	},
+	"supports": {
+		"html": false,
+		"anchor": true
+	},
+	"example": {
+		"attributes": {}
+	},
+	"editorScript": "file:./block-editor.js",
+	"style": "meet-with-me"
+}

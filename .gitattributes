@@ -1,0 +1,24 @@
+# Normalize line endings; treat real binaries as binary.
+* text=auto
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+
+# Keep `git archive` zips distribution-clean — mirrors .distignore, so a ZIP
+# produced by `git archive` matches the release packaging (CHANGELOG.md and
+# readme.txt ship; dev scaffolding does not).
+.gitattributes export-ignore
+.gitignore export-ignore
+.distignore export-ignore
+.github/ export-ignore
+README.md export-ignore
+composer.json export-ignore
+composer.lock export-ignore
+phpcs.xml.dist export-ignore
+phpunit.xml.dist export-ignore
+tests/ export-ignore
+bin/ export-ignore
+docs/ export-ignore

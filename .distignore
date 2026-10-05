@@ -1,0 +1,21 @@
+# Files and directories excluded from the WordPress.org distribution.
+#
+# Release decision: docs/ is excluded (setup content is mirrored in the
+# in-admin Help & Setup tab); tests/bin and dev tooling are excluded too.
+
+.git
+.github
+.gitignore
+.distignore
+.DS_Store
+.ds_store
+node_modules/
+vendor/
+composer.json
+composer.lock
+phpcs.xml.dist
+phpunit.xml.dist
+tests/
+bin/
+docs/
+README.md

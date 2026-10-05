@@ -1,0 +1,536 @@
+/* Meet With Me — Public Styles
+ * Structural layout with CSS custom properties and theme-friendly defaults.
+ * All classes use the .mwm- prefix.
+ *
+ * Tunable custom properties (set these from your theme or the plugin’s
+ * Settings → Style screen):
+ *   --mwm-accent           Accent color (buttons, progress, selected states)
+ *   --mwm-accent-contrast  Text color on accent-filled elements
+ *   --mwm-surface          Modal / overlay card surface
+ *   --mwm-surface-contrast Text color on that surface
+ *   --mwm-surface-muted    Muted tracks (progress bar, spinner)
+ *   --mwm-overlay          Modal backdrop color
+ *   --mwm-border           Border color (defaults to currentColor)
+ *   --mwm-radius           Corner radius for buttons/inputs
+ *   --mwm-btn-radius       Corner radius for buttons specifically
+ *   --mwm-radius-lg        Corner radius for cards/modal
+ *   --mwm-space            Spacing multiplier (1 = comfortable, .75 = compact)
+ *   --mwm-muted-opacity    Opacity for muted helper text
+ *   --mwm-wrap-width       Max width of the wizard / manage page
+ */
+
+/* Screen-reader-only utility (live regions, labels) */
+.mwm-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* =====================================================================
+   Wizard base
+   ===================================================================== */
+
+.mwm-booking-wizard {
+    font-size: 1rem;
+    line-height: 1.5;
+    max-width: var(--mwm-wrap-width, 560px);
+    margin: 0 auto;
+}
+
+/* Header: back / progress / event type label */
+.mwm-wiz-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+.mwm-wiz-back {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px 0;
+    white-space: nowrap;
+    font-size: 0.9em;
+}
+.mwm-wiz-progress { flex: 1; min-width: 0; }
+.mwm-wiz-progress__label { font-size: 0.8em; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+.mwm-wiz-progress__bar   { height: 4px; border-radius: 2px; background: var(--mwm-surface-muted, color-mix(in srgb, currentColor 10%, transparent)); overflow: hidden; }
+.mwm-wiz-progress__fill  { height: 100%; border-radius: 2px; background: var(--mwm-accent, currentColor); transition: width 0.3s ease; }
+.mwm-wiz-et-name         { font-size: 0.85em; white-space: nowrap; display: flex; align-items: center; gap: 6px; }
+
+/* Small color dot (inline) */
+.mwm-dot {
+    display: inline-block;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+/* =====================================================================
+   Steps
+   ===================================================================== */
+
+.mwm-step__title { margin: 0 0 16px; font-size: 1.2em; }
+.mwm-step__desc  { margin: 0; }
+
+/* Step 1 — type list */
+.mwm-type-list         { display: flex; flex-direction: column; gap: 8px; }
+.mwm-type-option {
+    display: flex;
+    align-items: stretch;
+    border: 1px solid var(--mwm-border, currentColor);
+    border-radius: var(--mwm-radius, 6px);
+    overflow: hidden;
+    background: none;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    padding: 0;
+}
+.mwm-type-option:hover { opacity: 0.85; }
+.mwm-type-option__bar  { width: 5px; flex-shrink: 0; }
+.mwm-type-option__body { flex: 1; padding: calc(14px * var(--mwm-space, 1)) 12px; display: flex; flex-direction: column; gap: 2px; }
+.mwm-type-option__name { font-size: 1em; }
+.mwm-type-option__meta { font-size: 0.85em; opacity: var(--mwm-muted-opacity, 0.7); }
+.mwm-type-option__desc { font-size: 0.85em; margin-top: 4px; }
+.mwm-type-option__arrow{ padding: 14px 12px; display: flex; align-items: center; font-size: 1.3em; opacity: 0.4; }
+
+/* Step 2 — calendar */
+.mwm-cal__nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.mwm-cal__nav-main { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.mwm-cal__nav-btn { background: none; border: 1px solid var(--mwm-border, currentColor); border-radius: var(--mwm-radius, 4px); cursor: pointer; padding: 4px 10px; font-size: 1.1em; line-height: 1; }
+.mwm-cal__nav-btn:disabled { opacity: 0.3; cursor: default; }
+.mwm-cal__title-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 700;
+    padding: 0;
+}
+.mwm-cal__title-btn:hover { opacity: 0.75; }
+.mwm-cal__today-btn {
+    background: none;
+    border: 1px solid var(--mwm-border, currentColor);
+    border-radius: 999px;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.75em;
+    line-height: 1;
+    padding: 6px 10px;
+}
+.mwm-cal__picker {
+    border: 1px solid var(--mwm-border, currentColor);
+    border-radius: var(--mwm-radius-lg, 8px);
+    padding: 12px;
+    margin-bottom: 12px;
+}
+.mwm-cal__picker-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+.mwm-cal__picker-label { font-size: 0.8em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+.mwm-cal__picker-select {
+    border: 1px solid var(--mwm-border, currentColor);
+    border-radius: var(--mwm-radius, 4px);
+    font: inherit;
+    padding: 6px 10px;
+    background: transparent;
+}
+.mwm-cal__picker-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+}
+.mwm-cal__picker-month {
+    border: 1px solid var(--mwm-border, currentColor);
+    border-radius: var(--mwm-radius, 6px);
+    background: none;
+    cursor: pointer;
+    font: inherit;
+    padding: 10px 8px;
+}
+.mwm-cal__picker-month:hover { opacity: 0.8; }
+.mwm-cal__picker-month:disabled { opacity: 0.3; cursor: default; }
+.mwm-cal__picker-month--active { font-weight: 700; }
+.mwm-cal__picker-month--today { box-shadow: inset 0 0 0 1px currentColor; }
+.mwm-cal__picker-note { margin: 12px 0 0; font-size: 0.85em; opacity: var(--mwm-muted-opacity, 0.7); }
+.mwm-cal__frame { position: relative; }
+.mwm-cal__grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 3px;
+}
+.mwm-cal__hdr { text-align: center; font-size: 0.75em; font-weight: 700; padding: 4px 0; opacity: 0.6; text-transform: uppercase; }
+.mwm-cal__day {
+    text-align: center;
+    padding: 8px 4px;
+    border-radius: var(--mwm-radius, 4px);
+    font-size: 0.9em;
+    line-height: 1;
+}
+.mwm-cal__day--empty  { }
+.mwm-cal__day--off    { opacity: 0.25; }
+.mwm-cal__day--on     { border: 1px solid var(--mwm-border, currentColor); cursor: pointer; background: none; }
+.mwm-cal__day--on:hover { opacity: 0.75; }
+.mwm-cal__day--sel    { font-weight: 700; background: var(--mwm-accent, transparent); color: var(--mwm-accent-contrast, inherit); }
+.mwm-cal__day--today  { box-shadow: inset 0 0 0 1px currentColor; }
+.mwm-cal__overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: rgba(127, 127, 127, 0.2);
+    background: color-mix(in srgb, var(--mwm-surface, Canvas) 72%, transparent);
+    backdrop-filter: blur(1px);
+}
+.mwm-cal__overlay-card {
+    max-width: 320px;
+    border: 1px solid var(--mwm-border, currentColor);
+    border-radius: var(--mwm-radius-lg, 8px);
+    padding: 16px;
+    background: var(--mwm-surface, Canvas);
+    color: var(--mwm-surface-contrast, CanvasText);
+    text-align: center;
+}
+.mwm-cal__overlay-card p { margin: 0 0 12px; }
+.mwm-cal__overlay-btn { min-width: 140px; }
+.mwm-cal__note { margin: 12px 0 0; font-size: 0.9em; opacity: var(--mwm-muted-opacity, 0.75); }
+
+/* Step 3 — time slots */
+.mwm-slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; list-style: none; padding: 0; margin: 0; }
+.mwm-slot  { width: 100%; text-align: center; padding: calc(10px * var(--mwm-space, 1)) 6px; border: 1px solid var(--mwm-border, currentColor); border-radius: var(--mwm-radius, 4px); cursor: pointer; background: none; font-size: 0.9em; }
+.mwm-slot:hover    { opacity: 0.75; }
+.mwm-slot--sel     { font-weight: 700; background: var(--mwm-accent, transparent); color: var(--mwm-accent-contrast, inherit); }
+
+/* Step 4 — booking form */
+.mwm-hp            { position: absolute; left: -9999px; overflow: hidden; width: 1px; height: 1px; }
+.mwm-form__group   { margin-bottom: calc(16px * var(--mwm-space, 1)); }
+.mwm-form__label   { display: block; font-weight: 600; margin-bottom: 5px; font-size: 0.95em; }
+.mwm-form__label--req::after { content: ' *'; }
+.mwm-optional      { font-weight: 400; opacity: var(--mwm-muted-opacity, 0.6); font-size: 0.9em; }
+.mwm-form__input,
+.mwm-form__select,
+.mwm-form__textarea { display: block; width: 100%; padding: 9px 12px; border: 1px solid var(--mwm-border, currentColor); border-radius: var(--mwm-radius, 4px); font-size: 1em; font-family: inherit; box-sizing: border-box; }
+.mwm-form__textarea { min-height: 90px; resize: vertical; }
+.mwm-form__error   { margin-top: 12px; padding: 10px 14px; border-radius: var(--mwm-radius, 4px); border: 1px solid; font-size: 0.9em; }
+.mwm-form__actions { margin-top: 20px; }
+
+/* Meeting type radio cards */
+.mwm-mt-opts { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+.mwm-mt-opt  { display: flex; align-items: center; gap: 8px; padding: calc(10px * var(--mwm-space, 1)) calc(16px * var(--mwm-space, 1)); border: 1px solid var(--mwm-border, currentColor); border-radius: var(--mwm-radius, 4px); cursor: pointer; }
+.mwm-mt-opt--sel { font-weight: 600; }
+
+/* Step 5 — confirmation */
+.mwm-confirm            { text-align: center; padding: 8px 0; }
+.mwm-confirm__icon      { font-size: 2.5em; margin-bottom: 8px; }
+.mwm-confirm__title     { margin: 0 0 6px; font-size: 1.4em; }
+.mwm-confirm__sub       { margin: 0 0 20px; opacity: var(--mwm-muted-opacity, 0.75); }
+.mwm-confirm__details   { display: inline-flex; flex-direction: column; gap: 8px; text-align: left; margin-bottom: 24px; }
+.mwm-confirm__row       { display: flex; gap: 10px; align-items: flex-start; }
+.mwm-confirm__manage p  { margin: 0 0 8px; opacity: var(--mwm-muted-opacity, 0.7); font-size: 0.9em; }
+
+/* =====================================================================
+   Loading / error
+   ===================================================================== */
+
+.mwm-loading { display: flex; align-items: center; gap: 10px; padding: 32px 0; justify-content: center; }
+.mwm-loading__text { font-size: 0.9em; opacity: var(--mwm-muted-opacity, 0.6); }
+.mwm-spinner {
+    display: inline-block;
+    width: 20px; height: 20px;
+    border: 2px solid var(--mwm-surface-muted, rgba(127, 127, 127, 0.35));
+    border-top-color: currentColor;
+    border-radius: 50%;
+    animation: mwm-spin 0.7s linear infinite;
+}
+@keyframes mwm-spin { to { transform: rotate(360deg); } }
+
+.mwm-error { padding: 24px; text-align: center; }
+.mwm-error p { margin: 0 0 12px; }
+
+/* =====================================================================
+   Buttons (structural — theme overrides colour freely)
+   ===================================================================== */
+
+.mwm-btn-primary,
+.mwm-btn-secondary {
+    display: inline-block;
+    padding: 10px 22px;
+    border: 1px solid var(--mwm-border, currentColor);
+    border-radius: var(--mwm-btn-radius, 4px);
+    cursor: pointer;
+    font-size: 1em;
+    font-family: inherit;
+    text-decoration: none;
+    text-align: center;
+}
+.mwm-btn-primary  { font-weight: 700; }
+
+/* Danger button (cancel action) */
+.mwm-btn-danger {
+    display: inline-block;
+    padding: 10px 22px;
+    border: 1px solid var(--mwm-border, currentColor);
+    border-radius: var(--mwm-btn-radius, 4px);
+    cursor: pointer;
+    font-size: 1em;
+    font-family: inherit;
+    text-decoration: none;
+    text-align: center;
+    font-weight: 600;
+}
+
+/* =====================================================================
+   Modal
+   ===================================================================== */
+
+.mwm-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+.mwm-modal[hidden] { display: none; }
+
+.mwm-modal__overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    background: var(--mwm-overlay, rgba(0, 0, 0, 0.55));
+}
+
+.mwm-modal__content {
+    position: relative;
+    width: 100%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    border-radius: var(--mwm-radius-lg, 8px);
+    padding: 32px;
+    box-sizing: border-box;
+    background: var(--mwm-surface, Canvas);
+    color: var(--mwm-surface-contrast, CanvasText);
+}
+
+.mwm-modal__close {
+    position: absolute;
+    top: 10px; right: 10px;
+    background: none;
+    border: none;
+    font-size: 1.3em;
+    cursor: pointer;
+    line-height: 1;
+    opacity: 0.5;
+    /* WCAG 2.5.8 target size: at least 24×24 CSS px */
+    min-width: 24px;
+    min-height: 24px;
+    padding: 6px 8px;
+    box-sizing: content-box;
+}
+.mwm-modal__close:hover { opacity: 1; }
+
+.mwm-no-scroll { overflow: hidden; }
+
+/* =====================================================================
+   Cards (for [mwm_cards] shortcode)
+   ===================================================================== */
+
+.mwm-cards {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(var(--mwm-columns, 3), 1fr);
+}
+
+.mwm-card {
+    border: 1px solid var(--mwm-border, currentColor);
+    border-radius: var(--mwm-radius-lg, 8px);
+    padding: calc(20px * var(--mwm-space, 1));
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.mwm-card__name {
+    font-size: 1.1em;
+    font-weight: 600;
+    margin: 0;
+}
+
+.mwm-card__meta {
+    font-size: 0.875em;
+    opacity: var(--mwm-muted-opacity, 0.75);
+}
+
+.mwm-card__description {
+    flex: 1;
+}
+
+.mwm-card__cta {
+    margin-top: 8px;
+}
+
+/* Simple button */
+.mwm-button {
+    display: inline-block;
+    cursor: pointer;
+}
+
+/* =====================================================================
+   Manage Booking page
+   ===================================================================== */
+
+.mwm-manage-page {
+    max-width: var(--mwm-wrap-width, 600px);
+    margin: 40px auto;
+    padding: 0 16px;
+}
+
+.mwm-manage {
+    max-width: var(--mwm-wrap-width, 560px);
+    font-size: 1rem;
+    line-height: 1.5;
+}
+
+.mwm-manage__header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.mwm-manage__event-name {
+    margin: 0;
+    font-size: 1.3em;
+}
+
+.mwm-manage__details {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 28px;
+}
+
+.mwm-manage__row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.mwm-manage__row--secondary {
+    opacity: var(--mwm-muted-opacity, 0.6);
+    font-size: 0.9em;
+}
+
+.mwm-manage__icon {
+    width: 20px;
+    flex-shrink: 0;
+    text-align: center;
+}
+
+.mwm-manage__btns {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.mwm-manage__confirm-msg {
+    margin: 0 0 14px;
+}
+
+.mwm-manage__notice {
+    margin: 0 0 12px;
+    opacity: var(--mwm-muted-opacity, 0.75);
+}
+
+.mwm-manage__success {
+    padding: 4px 0;
+}
+
+.mwm-manage__success-icon {
+    font-size: 2em;
+    margin-bottom: 6px;
+}
+
+.mwm-manage__success h3 {
+    margin: 0 0 8px;
+    font-size: 1.2em;
+}
+
+.mwm-manage__success p {
+    margin: 0 0 10px;
+}
+
+.mwm-manage__resched-title {
+    margin: 0 0 16px;
+    font-size: 1.1em;
+}
+
+.mwm-manage__slot-confirm {
+    margin-top: 16px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.mwm-manage__slot-selected {
+    margin: 0;
+    font-weight: 600;
+}
+
+.mwm-manage__error {
+    margin-top: 10px;
+    font-size: 0.9em;
+}
+
+/* =====================================================================
+   Focus & motion preferences
+   ===================================================================== */
+
+.mwm-booking-wizard :focus-visible,
+.mwm-modal :focus-visible,
+.mwm-manage :focus-visible,
+.mwm-cards :focus-visible {
+    outline: 2px solid var(--mwm-accent, currentColor);
+    outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mwm-spinner { animation: none; }
+    .mwm-wiz-progress__fill { transition: none; }
+}
+
+/* =====================================================================
+   Responsive
+   ===================================================================== */
+
+@media ( max-width: 600px ) {
+    .mwm-cards {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 520px) {
+    .mwm-modal__content { padding: 20px 16px; }
+    .mwm-slots          { grid-template-columns: repeat(3, 1fr); }
+    .mwm-wiz-header     { flex-wrap: wrap; }
+    .mwm-wiz-et-name    { display: none; }
+    .mwm-cal__picker-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .mwm-cal__nav-main { gap: 8px; }
+}

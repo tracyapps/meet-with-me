@@ -1,0 +1,15 @@
+# Dependencies
+/vendor/
+/node_modules/
+
+# Test & tooling artifacts
+.phpunit.result.cache
+.phpunit.cache/
+/coverage/
+
+# Composer
+composer.phar
+
+# OS / editor noise
+.DS_Store
+*.log
