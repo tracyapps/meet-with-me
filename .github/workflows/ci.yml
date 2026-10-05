@@ -56,6 +56,11 @@ jobs:
       - name: Install dependencies
         run: composer install --prefer-dist --no-progress
 
+      # bin/install-wp-tests.sh fetches WordPress core via subversion, which
+      # is no longer preinstalled on GitHub's runner images.
+      - name: Install subversion
+        run: sudo apt-get update && sudo apt-get install -y subversion
+
       # Standard WP test scaffold: downloads WordPress + the test library
       # into /tmp and creates the wordpress_test database.
       - name: Install WordPress test suite
