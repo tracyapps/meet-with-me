@@ -15,6 +15,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class MWM_REST {
 
+	private bool $booking_transaction = false;
+
 	public function register_routes(): void {
 		register_rest_route(
 			'mwm/v1',
@@ -35,15 +37,20 @@ class MWM_REST {
 				'permission_callback' => '__return_true',
 				'args'                => array(
 					'event_type' => array(
+						'type'              => 'string',
+						'validate_callback' => 'rest_validate_request_arg',
 						'required'          => true,
 						'sanitize_callback' => 'sanitize_key',
 					),
 					'date'       => array(
+						'type'              => 'string',
 						'required'          => true,
 						'sanitize_callback' => 'sanitize_text_field',
-						'validate_callback' => fn( $v ) => (bool) preg_match( '/^\d{4}-\d{2}-\d{2}$/', $v ),
+						'validate_callback' => fn( $v ) => MWM_Availability::valid_date( $v ),
 					),
 					'tz'         => array(
+						'type'              => 'string',
+						'validate_callback' => 'rest_validate_request_arg',
 						'default'           => 'UTC',
 						'sanitize_callback' => 'sanitize_text_field',
 					),
@@ -60,18 +67,30 @@ class MWM_REST {
 				'permission_callback' => '__return_true',
 				'args'                => array(
 					'event_type' => array(
+						'type'              => 'string',
+						'validate_callback' => 'rest_validate_request_arg',
 						'required'          => true,
 						'sanitize_callback' => 'sanitize_key',
 					),
 					'year'       => array(
+						'type'              => 'integer',
+						'validate_callback' => 'rest_validate_request_arg',
+						'minimum'           => 1,
+						'maximum'           => 9999,
 						'required'          => true,
 						'sanitize_callback' => 'absint',
 					),
 					'month'      => array(
+						'type'              => 'integer',
+						'validate_callback' => 'rest_validate_request_arg',
+						'minimum'           => 1,
+						'maximum'           => 12,
 						'required'          => true,
 						'sanitize_callback' => 'absint',
 					),
 					'tz'         => array(
+						'type'              => 'string',
+						'validate_callback' => 'rest_validate_request_arg',
 						'default'           => 'UTC',
 						'sanitize_callback' => 'sanitize_text_field',
 					),
@@ -104,6 +123,16 @@ class MWM_REST {
 
 		register_rest_route(
 			'mwm/v1',
+			'/bookings/(?P<id>\d+)/availability',
+			array(
+				'methods'             => WP_REST_Server::CREATABLE,
+				'callback'            => array( $this, 'get_reschedule_availability' ),
+				'permission_callback' => '__return_true',
+			)
+		);
+
+		register_rest_route(
+			'mwm/v1',
 			'/bookings/(?P<id>\d+)/reschedule',
 			array(
 				'methods'             => WP_REST_Server::CREATABLE,
@@ -126,7 +155,7 @@ class MWM_REST {
 		return new WP_REST_Response( $data, 200 );
 	}
 
-	public function get_slots( WP_REST_Request $request ): WP_REST_Response {
+	public function get_slots( WP_REST_Request $request, int $exclude_booking_id = 0 ): WP_REST_Response {
 		$slug = $request->get_param( 'event_type' );
 		$date = $request->get_param( 'date' );
 		$tz   = $this->safe_tz( $request->get_param( 'tz' ) );
@@ -136,7 +165,10 @@ class MWM_REST {
 			return new WP_REST_Response( array( 'message' => __( 'Meeting type not found.', 'meet-with-me' ) ), 404 );
 		}
 
-		$slots = MWM_Availability::get_slots_for_date( $date, $event_type, $tz );
+		$slots = MWM_Availability::get_slots_for_date( $date, $event_type, $tz, $exclude_booking_id );
+		if ( MWM_Availability::get_last_error() ) {
+			return $this->availability_error();
+		}
 
 		return new WP_REST_Response(
 			array(
@@ -148,13 +180,13 @@ class MWM_REST {
 		);
 	}
 
-	public function get_month( WP_REST_Request $request ): WP_REST_Response {
+	public function get_month( WP_REST_Request $request, int $exclude_booking_id = 0 ): WP_REST_Response {
 		$slug  = $request->get_param( 'event_type' );
 		$year  = (int) $request->get_param( 'year' );
 		$month = (int) $request->get_param( 'month' );
 		$tz    = $this->safe_tz( $request->get_param( 'tz' ) );
 
-		if ( $month < 1 || $month > 12 ) {
+		if ( $year < 1 || $year > 9999 || $month < 1 || $month > 12 ) {
 			return new WP_REST_Response( array( 'message' => __( 'Invalid month.', 'meet-with-me' ) ), 400 );
 		}
 
@@ -163,7 +195,10 @@ class MWM_REST {
 			return new WP_REST_Response( array( 'message' => __( 'Meeting type not found.', 'meet-with-me' ) ), 404 );
 		}
 
-		$available_dates = MWM_Availability::get_available_dates_for_month( $year, $month, $event_type, $tz );
+		$available_dates = MWM_Availability::get_available_dates_for_month( $year, $month, $event_type, $tz, $exclude_booking_id );
+		if ( MWM_Availability::get_last_error() ) {
+			return $this->availability_error();
+		}
 
 		return new WP_REST_Response(
 			array(
@@ -176,7 +211,57 @@ class MWM_REST {
 	}
 
 	public function create_booking( WP_REST_Request $request ): WP_REST_Response {
-		$body = $request->get_json_params() ?: array();
+		return $this->with_booking_lock( fn() => $this->create_booking_locked( $request ), true );
+	}
+
+	/** Exclude the current booking only after checking its private reschedule token. */
+	public function get_reschedule_availability( WP_REST_Request $request ): WP_REST_Response {
+		$response = $this->reschedule_availability( $request );
+		$response->header( 'Cache-Control', 'private, no-store, max-age=0' );
+		$response->header( 'Referrer-Policy', 'no-referrer' );
+		return $response;
+	}
+
+	private function reschedule_availability( WP_REST_Request $request ): WP_REST_Response {
+		$body = $this->booking_body( $request );
+		if ( $body instanceof WP_REST_Response ) {
+			return $body;
+		}
+		$booking = MWM_Booking::get( (int) $request['id'] );
+		$token   = $body['reschedule_token'] ?? '';
+		if ( ! $booking || ! $token || ! hash_equals( $booking['reschedule_token'], $token ) ) {
+			return new WP_REST_Response( array( 'message' => __( 'Invalid token.', 'meet-with-me' ) ), 403 );
+		}
+		if ( $booking['status'] !== 'confirmed' ) {
+			return new WP_REST_Response( array( 'message' => __( 'This booking is not active.', 'meet-with-me' ) ), 409 );
+		}
+		$event_type = MWM_Event_Type::get( $booking['event_type_id'] );
+		if ( ! $event_type || ! $event_type['is_active'] ) {
+			return new WP_REST_Response( array( 'message' => __( 'Meeting type not found.', 'meet-with-me' ) ), 404 );
+		}
+		$availability = new WP_REST_Request( 'GET' );
+		$availability->set_param( 'event_type', $event_type['slug'] );
+		$availability->set_param( 'tz', $body['timezone'] ?? 'UTC' );
+		if ( isset( $body['date'] ) ) {
+			if ( ! MWM_Availability::valid_date( $body['date'] ) ) {
+				return new WP_REST_Response( array( 'message' => __( 'Invalid date.', 'meet-with-me' ) ), 400 );
+			}
+			$availability->set_param( 'date', $body['date'] );
+			return $this->get_slots( $availability, (int) $booking['id'] );
+		}
+		if ( ! isset( $body['year'], $body['month'] ) || ! is_int( $body['year'] ) || ! is_int( $body['month'] ) ) {
+			return new WP_REST_Response( array( 'message' => __( 'Invalid month.', 'meet-with-me' ) ), 400 );
+		}
+		$availability->set_param( 'year', $body['year'] );
+		$availability->set_param( 'month', $body['month'] );
+		return $this->get_month( $availability, (int) $booking['id'] );
+	}
+
+	private function create_booking_locked( WP_REST_Request $request ): WP_REST_Response {
+		$body = $this->booking_body( $request );
+		if ( $body instanceof WP_REST_Response ) {
+			return $body;
+		}
 
 		// Honeypot
 		if ( ! empty( $body['mwm_hp'] ) ) {
@@ -187,12 +272,6 @@ class MWM_REST {
 				),
 				200
 			); // silent discard
-		}
-
-		// Abuse mitigation: transient-based rate limiting per client IP.
-		$limited = $this->check_rate_limit();
-		if ( $limited ) {
-			return $limited;
 		}
 
 		// Required fields
@@ -231,8 +310,7 @@ class MWM_REST {
 		}
 
 		// Validate datetime formats
-		if ( ! preg_match( '/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $start_utc ) ||
-			! preg_match( '/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $end_utc ) ) {
+		if ( ! MWM_Availability::valid_datetime( $start_utc ) || ! MWM_Availability::valid_datetime( $end_utc ) ) {
 			return new WP_REST_Response( array( 'message' => __( 'Invalid datetime format.', 'meet-with-me' ) ), 400 );
 		}
 
@@ -255,6 +333,9 @@ class MWM_REST {
 
 		// Verify slot is still available immediately before insert.
 		if ( ! MWM_Availability::is_slot_available( $start_utc, $end_utc, $event_type ) ) {
+			if ( MWM_Availability::get_last_error() ) {
+				return $this->availability_error();
+			}
 			return new WP_REST_Response( array( 'message' => __( 'Sorry, that time is no longer available. Please choose another slot.', 'meet-with-me' ) ), 409 );
 		}
 
@@ -313,6 +394,9 @@ class MWM_REST {
 		}
 
 		$booking = MWM_Booking::get( $booking_id );
+		if ( ! $booking || ! $this->commit_booking_change() ) {
+			return $this->availability_error();
+		}
 
 		try {
 			do_action( 'mwm_booking_confirmed', $booking, $event_type );
@@ -320,7 +404,10 @@ class MWM_REST {
 			error_log( '[Meet With Me] Booking confirmation hooks failed: ' . $e->getMessage() ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- deliberate failure log
 		}
 
-		$booking = MWM_Booking::get( $booking_id ) ?: $booking;
+		$fresh = MWM_Booking::get( $booking_id );
+		if ( $fresh && hash_equals( $booking['cancel_token'], $fresh['cancel_token'] ) ) {
+			$booking = $fresh;
+		}
 
 		// Build confirmation data for the frontend
 		$start_local = MWM_Booking::format_datetime( $start_utc, $tz, get_option( 'date_format' ) . ' \a\t ' . get_option( 'time_format' ) );
@@ -436,8 +523,15 @@ class MWM_REST {
 	}
 
 	public function cancel_booking( WP_REST_Request $request ): WP_REST_Response {
+		return $this->with_booking_lock( fn() => $this->cancel_booking_locked( $request ) );
+	}
+
+	private function cancel_booking_locked( WP_REST_Request $request ): WP_REST_Response {
 		$id   = (int) $request->get_param( 'id' );
-		$body = $request->get_json_params() ?: array();
+		$body = $this->booking_body( $request );
+		if ( $body instanceof WP_REST_Response ) {
+			return $body;
+		}
 
 		$token = sanitize_text_field( $body['cancel_token'] ?? '' );
 		if ( ! $token ) {
@@ -454,10 +548,15 @@ class MWM_REST {
 			return new WP_REST_Response( array( 'message' => __( 'This booking is not active.', 'meet-with-me' ) ), 409 );
 		}
 
-		MWM_Booking::cancel( $id );
+		if ( ! MWM_Booking::cancel( $id, $token ) ) {
+			return $this->availability_error();
+		}
 
 		$cancelled  = MWM_Booking::get( $id );
 		$event_type = MWM_Event_Type::get( $booking['event_type_id'] );
+		if ( ! $cancelled || ! $this->commit_booking_change() ) {
+			return $this->availability_error();
+		}
 
 		try {
 			do_action( 'mwm_booking_cancelled', $cancelled, $event_type );
@@ -469,8 +568,15 @@ class MWM_REST {
 	}
 
 	public function reschedule_booking( WP_REST_Request $request ): WP_REST_Response {
+		return $this->with_booking_lock( fn() => $this->reschedule_booking_locked( $request ) );
+	}
+
+	private function reschedule_booking_locked( WP_REST_Request $request ): WP_REST_Response {
 		$id   = (int) $request->get_param( 'id' );
-		$body = $request->get_json_params() ?: array();
+		$body = $this->booking_body( $request );
+		if ( $body instanceof WP_REST_Response ) {
+			return $body;
+		}
 
 		$token     = sanitize_text_field( $body['reschedule_token'] ?? '' );
 		$start_utc = sanitize_text_field( $body['start_utc'] ?? '' );
@@ -502,19 +608,21 @@ class MWM_REST {
 		}
 
 		// Validate datetime formats
-		if ( ! preg_match( '/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $start_utc ) ||
-			! preg_match( '/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $end_utc ) ) {
+		if ( ! MWM_Availability::valid_datetime( $start_utc ) || ! MWM_Availability::valid_datetime( $end_utc ) ) {
 			return new WP_REST_Response( array( 'message' => __( 'Invalid datetime format.', 'meet-with-me' ) ), 400 );
 		}
 
 		$event_type = MWM_Event_Type::get( $booking['event_type_id'] );
-		if ( ! $event_type ) {
+		if ( ! $event_type || ! $event_type['is_active'] ) {
 			return new WP_REST_Response( array( 'message' => __( 'Meeting type not found.', 'meet-with-me' ) ), 404 );
 		}
 
 		// Verify slot is available immediately before insert
 		// (pass old booking ID to exclude it from conflict check)
 		if ( ! MWM_Availability::is_slot_available( $start_utc, $end_utc, $event_type, $id ) ) {
+			if ( MWM_Availability::get_last_error() ) {
+				return $this->availability_error();
+			}
 			return new WP_REST_Response( array( 'message' => __( 'Sorry, that time is no longer available. Please choose another slot.', 'meet-with-me' ) ), 409 );
 		}
 
@@ -567,16 +675,22 @@ class MWM_REST {
 			}
 		}
 
-		// Mark original booking as rescheduled
-		MWM_Booking::update(
+		// Claim the original token/status before committing the new destination.
+		if ( ! MWM_Booking::update(
 			$id,
 			array(
 				'status'     => 'rescheduled',
 				'updated_at' => current_time( 'mysql', true ),
-			)
-		);
+			),
+			$booking['cancel_token']
+		) ) {
+			return $this->availability_error();
+		}
 
 		$new_booking = MWM_Booking::get( $new_id );
+		if ( ! $new_booking || ! $this->commit_booking_change() ) {
+			return $this->availability_error();
+		}
 
 		try {
 			do_action( 'mwm_booking_rescheduled', $new_booking, $booking, $event_type );
@@ -653,6 +767,85 @@ class MWM_REST {
 		}
 
 		return null;
+	}
+
+	private function booking_body( WP_REST_Request $request ): array|WP_REST_Response {
+		$body = $request->get_json_params();
+		if ( ! is_array( $body ) || ( $body && array_keys( $body ) === range( 0, count( $body ) - 1 ) ) ) {
+			return new WP_REST_Response( array( 'message' => __( 'Invalid booking request.', 'meet-with-me' ) ), 400 );
+		}
+		foreach ( array( 'event_type', 'start_utc', 'end_utc', 'timezone', 'booker_name', 'booker_email', 'booker_phone', 'booker_notes', 'meeting_type', 'cancel_token', 'reschedule_token', 'mwm_hp', 'date' ) as $key ) {
+			if ( array_key_exists( $key, $body ) && ! is_string( $body[ $key ] ) ) {
+				return new WP_REST_Response( array( 'message' => __( 'Invalid booking request.', 'meet-with-me' ) ), 400 );
+			}
+		}
+		if ( isset( $body['field_answers'] ) ) {
+			if ( ! is_array( $body['field_answers'] ) ) {
+				return new WP_REST_Response( array( 'message' => __( 'Invalid booking request.', 'meet-with-me' ) ), 400 );
+			}
+			foreach ( $body['field_answers'] as $answer ) {
+				$values = is_array( $answer ) ? $answer : array( $answer );
+				foreach ( $values as $value ) {
+					if ( ! is_string( $value ) ) {
+						return new WP_REST_Response( array( 'message' => __( 'Invalid booking request.', 'meet-with-me' ) ), 400 );
+					}
+				}
+			}
+		}
+		return $body;
+	}
+
+	private function availability_error(): WP_REST_Response {
+		return new WP_REST_Response( array( 'message' => __( 'The booking service could not verify this request. Please try again shortly.', 'meet-with-me' ) ), 503, array( 'Retry-After' => '3' ) );
+	}
+
+	private function commit_booking_change(): bool {
+		global $wpdb;
+		if ( ! $this->booking_transaction || false === $wpdb->query( 'COMMIT' ) ) {
+			return false;
+		}
+		$this->booking_transaction = false;
+		return true;
+	}
+
+	/** Serialize one host's mutations across meeting types and overlapping buffers. */
+	private function with_booking_lock( callable $callback, bool $rate_limit = false ): WP_REST_Response {
+		global $wpdb;
+		$name = MWM_Booking::lock_name();
+		if ( '1' !== (string) $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK(%s, 0)', $name ) ) ) {
+			return $this->availability_error();
+		}
+		try {
+			$engine = $wpdb->get_row( $wpdb->prepare( 'SHOW TABLE STATUS WHERE Name = %s', $wpdb->prefix . 'mwm_bookings' ), ARRAY_A );
+			if ( ! $engine || strtoupper( $engine['Engine'] ) !== 'INNODB' ) {
+				return $this->availability_error();
+			}
+			if ( $rate_limit ) {
+				$limited = $this->check_rate_limit();
+				if ( $limited ) {
+					return $limited;
+				}
+			}
+			if ( false === $wpdb->query( 'START TRANSACTION' ) ) {
+				return $this->availability_error();
+			}
+			$this->booking_transaction = true;
+			$response                  = $callback();
+			if ( $this->booking_transaction && $response->get_status() < 400 && ! $this->commit_booking_change() ) {
+				return $this->availability_error();
+			}
+			return $response;
+		} catch ( \Throwable $exception ) {
+			return $this->availability_error();
+		} finally {
+			if ( $this->booking_transaction ) {
+				$wpdb->query( 'ROLLBACK' );
+				$this->booking_transaction = false;
+			}
+			// Keep the host lock during synchronous hooks, after committing SQL,
+			// so a slow provider cannot write artifacts into a reused booking ID.
+			$wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', $name ) );
+		}
 	}
 
 	private function format_event_type( array $et ): array {

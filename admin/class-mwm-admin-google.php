@@ -138,7 +138,7 @@ class MWM_Admin_Google {
 			: (string) ( $existing['client_secret'] ?? '' );
 
 		// Validate the client ID format when one is provided.
-		if ( $client_id !== '' && ! str_ends_with( $client_id, '.apps.googleusercontent.com' ) ) {
+		if ( $client_id !== '' && ! str_ends_with( $client_id, '.apps.googleusercontent.com' ) ) { // phpcs:ignore PluginCheck.CodeAnalysis.Offloading.OffloadedContent -- OAuth client ID suffix validation; no resource is fetched.
 			$this->redirect( 'invalid_client_id' );
 			return;
 		}
@@ -272,7 +272,7 @@ class MWM_Admin_Google {
 			),
 			'invalid_client_id' => array(
 				'type'    => 'error',
-				'message' => __( 'That does not look like a Google OAuth Client ID. It should end with ".apps.googleusercontent.com". Please check and try again.', 'meet-with-me' ),
+				'message' => __( 'That does not look like a Google OAuth Client ID. It should end with ".apps.googleusercontent.com". Please check and try again.', 'meet-with-me' ), // phpcs:ignore PluginCheck.CodeAnalysis.Offloading.OffloadedContent -- OAuth ID guidance, not a remote asset.
 			),
 			default             => null,
 		};

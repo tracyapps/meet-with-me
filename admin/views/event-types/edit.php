@@ -114,6 +114,7 @@ foreach ( $routing_fields as $routing_field ) {
 							</select>
 							<span id="mwm-duration-custom-wrap" <?php echo $is_custom_duration ? '' : 'style="display:none"'; ?>>
 								<input type="number" id="mwm-duration-custom" name="duration_custom"
+									aria-label="<?php esc_attr_e( 'Custom duration in minutes', 'meet-with-me' ); ?>"
 									value="<?php echo $is_custom_duration ? esc_attr( $et['duration_minutes'] ) : ''; ?>"
 									min="5" max="480" class="small-text">
 								<?php esc_html_e( 'minutes', 'meet-with-me' ); ?>

@@ -153,14 +153,14 @@ $format_labels = array(
 
 			<!-- Admin Notes -->
 			<div class="mwm-card">
-				<h2><?php esc_html_e( 'Admin Notes', 'meet-with-me' ); ?></h2>
+				<h2><label for="mwm-admin-notes"><?php esc_html_e( 'Admin Notes', 'meet-with-me' ); ?></label></h2>
 				<p class="description" style="margin-bottom:12px;">
 					<?php esc_html_e( 'Internal notes — not visible to the booker.', 'meet-with-me' ); ?>
 				</p>
 				<form method="post" action="">
 					<?php wp_nonce_field( 'mwm_booking_notes_' . $booking['id'] ); ?>
 					<input type="hidden" name="booking_id" value="<?php echo esc_attr( $booking['id'] ); ?>">
-					<textarea name="admin_notes" rows="4" class="large-text"><?php echo esc_textarea( $booking['admin_notes'] ?? '' ); ?></textarea>
+					<textarea id="mwm-admin-notes" name="admin_notes" rows="4" class="large-text"><?php echo esc_textarea( $booking['admin_notes'] ?? '' ); ?></textarea>
 					<p class="submit">
 						<button type="submit" name="mwm_save_admin_notes" class="button button-primary">
 							<?php esc_html_e( 'Save Notes', 'meet-with-me' ); ?>

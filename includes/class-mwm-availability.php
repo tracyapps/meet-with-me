@@ -15,6 +15,36 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class MWM_Availability {
 
+	private static ?WP_Error $last_error = null;
+
+	public static function get_last_error(): ?WP_Error {
+		return self::$last_error;
+	}
+
+	public static function valid_date( $value ): bool {
+		if ( ! is_string( $value ) || ! preg_match( '/^\d{4}-\d{2}-\d{2}$/D', $value ) ) {
+			return false;
+		}
+		return checkdate( (int) substr( $value, 5, 2 ), (int) substr( $value, 8, 2 ), (int) substr( $value, 0, 4 ) );
+	}
+
+	public static function valid_datetime( $value ): bool {
+		if ( ! is_string( $value ) || ! preg_match( '/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/D', $value ) || ! self::valid_date( substr( $value, 0, 10 ) ) ) {
+			return false;
+		}
+		$parsed = DateTimeImmutable::createFromFormat( '!Y-m-d H:i:s', $value, new DateTimeZone( 'UTC' ) );
+		return $parsed && $parsed->format( 'Y-m-d H:i:s' ) === $value;
+	}
+
+	private static function read_failed(): bool {
+		global $wpdb;
+		if ( $wpdb->last_error ) {
+			self::$last_error = new WP_Error( 'mwm_availability_unavailable', __( 'Availability could not be verified. Please try again shortly.', 'meet-with-me' ), array( 'status' => 503 ) );
+			return true;
+		}
+		return false;
+	}
+
 	// -------------------------------------------------------------------------
 	// Public API
 	// -------------------------------------------------------------------------
@@ -27,7 +57,11 @@ class MWM_Availability {
 	 * @param string $booker_tz   IANA timezone string for the booker (e.g. 'America/New_York').
 	 * @return array[] Array of slot arrays: { start_utc, end_utc, start_local, start_iso }
 	 */
-	public static function get_slots_for_date( string $date, array $event_type, string $booker_tz = 'UTC' ): array {
+	public static function get_slots_for_date( string $date, array $event_type, string $booker_tz = 'UTC', int $exclude_booking_id = 0 ): array {
+		self::$last_error = null;
+		if ( ! self::valid_date( $date ) ) {
+			return array();
+		}
 		$admin_tz = self::admin_tz();
 		$utc_tz   = new DateTimeZone( 'UTC' );
 
@@ -59,20 +93,25 @@ class MWM_Availability {
 		$day_start_utc = ( new DateTimeImmutable( "{$date} 00:00:00", $admin_tz ) )->setTimezone( $utc_tz );
 		$day_end_utc   = ( new DateTimeImmutable( "{$date} 23:59:59", $admin_tz ) )->setTimezone( $utc_tz );
 		$existing      = self::get_bookings_in_range(
-			$day_start_utc->modify( '-120 minutes' ),
-			$day_end_utc->modify( '+120 minutes' )
+			$day_start_utc->modify( '-' . max( 0, $buffer_before ) . ' minutes' ),
+			$day_end_utc->modify( '+' . max( 0, $buffer_after ) . ' minutes' ),
+			$exclude_booking_id
 		);
+
+		if ( self::$last_error ) {
+			return array();
+		}
 
 		// Check max bookings per day for this event type
 		if ( $event_type['max_per_day'] !== null ) {
-			if ( self::count_bookings_for_date( $event_type['id'], $date ) >= $event_type['max_per_day'] ) {
+			if ( self::count_bookings_for_date( $event_type['id'], $date, $exclude_booking_id ) >= $event_type['max_per_day'] ) {
 				return array();
 			}
 		}
 
 		// Check max bookings per week for this event type
 		if ( $event_type['max_per_week'] !== null ) {
-			if ( self::count_bookings_for_week( $event_type['id'], $date ) >= $event_type['max_per_week'] ) {
+			if ( self::count_bookings_for_week( $event_type['id'], $date, $exclude_booking_id ) >= $event_type['max_per_week'] ) {
 				return array();
 			}
 		}
@@ -81,6 +120,11 @@ class MWM_Availability {
 		$gcal_busy = MWM_Google_Calendar::is_connected()
 			? MWM_Google_Calendar::get_busy_periods_for_date( $date, $admin_tz )
 			: array();
+
+		if ( is_wp_error( $gcal_busy ) ) {
+			self::$last_error = $gcal_busy;
+			return array();
+		}
 
 		// Generate slots
 		$slots         = array();
@@ -130,7 +174,11 @@ class MWM_Availability {
 	 * @param string $booker_tz
 	 * @return string[]  Array of 'Y-m-d' date strings.
 	 */
-	public static function get_available_dates_for_month( int $year, int $month, array $event_type, string $booker_tz = 'UTC' ): array {
+	public static function get_available_dates_for_month( int $year, int $month, array $event_type, string $booker_tz = 'UTC', int $exclude_booking_id = 0 ): array {
+		self::$last_error = null;
+		if ( $year < 1 || $year > 9999 || $month < 1 || $month > 12 ) {
+			return array();
+		}
 		$admin_tz      = self::admin_tz();
 		$first_day     = new DateTimeImmutable( sprintf( '%04d-%02d-01', $year, $month ), $admin_tz );
 		$days_in_month = (int) $first_day->format( 't' );
@@ -138,8 +186,11 @@ class MWM_Availability {
 
 		for ( $day = 1; $day <= $days_in_month; $day++ ) {
 			$date = sprintf( '%04d-%02d-%02d', $year, $month, $day );
-			if ( ! empty( self::get_slots_for_date( $date, $event_type, $booker_tz ) ) ) {
+			if ( ! empty( self::get_slots_for_date( $date, $event_type, $booker_tz, $exclude_booking_id ) ) ) {
 				$available[] = $date;
+			}
+			if ( self::$last_error ) {
+				return array();
 			}
 		}
 
@@ -157,6 +208,10 @@ class MWM_Availability {
 	 * @return bool
 	 */
 	public static function is_slot_available( string $start_utc, string $end_utc, array $event_type, int $exclude_booking_id = 0 ): bool {
+		self::$last_error = null;
+		if ( ! self::valid_datetime( $start_utc ) || ! self::valid_datetime( $end_utc ) ) {
+			return false;
+		}
 		$utc_tz   = new DateTimeZone( 'UTC' );
 		$admin_tz = self::admin_tz();
 
@@ -190,16 +245,23 @@ class MWM_Availability {
 
 		// Conflict check
 		$existing = self::get_bookings_in_range(
-			$start->modify( '-120 minutes' ),
-			$end->modify( '+120 minutes' ),
+			$start->modify( '-' . max( 0, $event_type['buffer_before'] ) . ' minutes' ),
+			$end->modify( '+' . max( 0, $event_type['buffer_after'] ) . ' minutes' ),
 			$exclude_booking_id
 		);
+		if ( self::$last_error ) {
+			return false;
+		}
 		if ( self::slot_conflicts( $start, $end, $existing, $event_type['buffer_before'], $event_type['buffer_after'] ) ) {
 			return false;
 		}
 
 		if ( MWM_Google_Calendar::is_connected() ) {
-			$gcal_busy = MWM_Google_Calendar::get_busy_periods_for_date( $date, $admin_tz );
+			$gcal_busy = MWM_Google_Calendar::get_busy_periods_for_date( $date, $admin_tz, true );
+			if ( is_wp_error( $gcal_busy ) ) {
+				self::$last_error = $gcal_busy;
+				return false;
+			}
 			if ( self::slot_overlaps_gcal( $start, $end, $gcal_busy ) ) {
 				return false;
 			}
@@ -207,14 +269,14 @@ class MWM_Availability {
 
 		// Per-day limit
 		if ( $event_type['max_per_day'] !== null ) {
-			if ( self::count_bookings_for_date( $event_type['id'], $date ) >= $event_type['max_per_day'] ) {
+			if ( self::count_bookings_for_date( $event_type['id'], $date, $exclude_booking_id ) >= $event_type['max_per_day'] ) {
 				return false;
 			}
 		}
 
 		// Per-week limit
 		if ( $event_type['max_per_week'] !== null ) {
-			if ( self::count_bookings_for_week( $event_type['id'], $date ) >= $event_type['max_per_week'] ) {
+			if ( self::count_bookings_for_week( $event_type['id'], $date, $exclude_booking_id ) >= $event_type['max_per_week'] ) {
 				return false;
 			}
 		}
@@ -248,6 +310,10 @@ class MWM_Availability {
 			ARRAY_A
 		);
 
+		if ( self::read_failed() ) {
+			return array();
+		}
+
 		if ( ! empty( $overrides ) ) {
 			foreach ( $overrides as $o ) {
 				if ( ! (int) $o['is_available'] ) {
@@ -276,6 +342,10 @@ class MWM_Availability {
 			),
 			ARRAY_A
 		);
+
+		if ( self::read_failed() ) {
+			return array();
+		}
 
 		if ( empty( $rules ) ) {
 			return array();
@@ -363,64 +433,56 @@ class MWM_Availability {
 
 	private static function is_date_blocked( string $date ): bool {
 		global $wpdb;
-		return (bool) $wpdb->get_var(
+		$blocked = $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT id FROM {$wpdb->prefix}mwm_blocked_dates WHERE blocked_date = %s",
 				$date
 			)
 		);
+		return self::read_failed() || (bool) $blocked;
 	}
 
 	private static function get_bookings_in_range( DateTimeImmutable $start, DateTimeImmutable $end, int $exclude_booking_id = 0 ): array {
 		global $wpdb;
-		$sql = "SELECT b.start_datetime, b.end_datetime, et.buffer_before, et.buffer_after
-                FROM {$wpdb->prefix}mwm_bookings b
-                LEFT JOIN {$wpdb->prefix}mwm_event_types et ON et.id = b.event_type_id
-                WHERE b.status = 'confirmed'
-                  AND b.start_datetime < %s
-                  AND b.end_datetime > %s";
-
-		if ( $exclude_booking_id > 0 ) {
-			return $wpdb->get_results(
-				$wpdb->prepare( // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- $sql carries two more placeholders
-					$sql . ' AND b.id != %d', // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- $sql carries the placeholders above
-					$end->format( 'Y-m-d H:i:s' ),
-					$start->format( 'Y-m-d H:i:s' ),
-					$exclude_booking_id,
-				),
-				ARRAY_A
-			) ?: array();
-		}
-		return $wpdb->get_results(
-			$wpdb->prepare(
-				$sql, // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- placeholders counted above
-				$end->format( 'Y-m-d H:i:s' ),
-				$start->format( 'Y-m-d H:i:s' )
-			),
+		// Compare buffered existing bounds with the proposed protected interval.
+		// Fixed padding misses combined buffers and bookings across midnight.
+		$sql  = "SELECT b.start_datetime, b.end_datetime, et.buffer_before, et.buffer_after
+			FROM {$wpdb->prefix}mwm_bookings b
+			LEFT JOIN {$wpdb->prefix}mwm_event_types et ON et.id = b.event_type_id
+			WHERE b.status = 'confirmed'
+			AND DATE_SUB(b.start_datetime, INTERVAL COALESCE(et.buffer_before, 0) MINUTE) < %s
+			AND DATE_ADD(b.end_datetime, INTERVAL COALESCE(et.buffer_after, 0) MINUTE) > %s
+			AND b.id != %d";
+		$rows = $wpdb->get_results(
+			$wpdb->prepare( $sql, $end->format( 'Y-m-d H:i:s' ), $start->format( 'Y-m-d H:i:s' ), $exclude_booking_id ), // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Literal query and three matching placeholders above.
 			ARRAY_A
-		) ?: array();
+		);
+		self::read_failed();
+		return $rows ?: array();
 	}
 
-	private static function count_bookings_for_date( int $event_type_id, string $date ): int {
+	private static function count_bookings_for_date( int $event_type_id, string $date, int $exclude_booking_id = 0 ): int {
 		global $wpdb;
 		$utc_tz   = new DateTimeZone( 'UTC' );
 		$admin_tz = self::admin_tz();
 		$s        = ( new DateTimeImmutable( "{$date} 00:00:00", $admin_tz ) )->setTimezone( $utc_tz );
 		$e        = ( new DateTimeImmutable( "{$date} 23:59:59", $admin_tz ) )->setTimezone( $utc_tz );
 
-		return (int) $wpdb->get_var(
+		$count = $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT COUNT(*) FROM {$wpdb->prefix}mwm_bookings
-             WHERE event_type_id = %d AND status = 'confirmed'
+             WHERE event_type_id = %d AND status = 'confirmed' AND id != %d
                AND start_datetime >= %s AND start_datetime <= %s",
 				$event_type_id,
+				$exclude_booking_id,
 				$s->format( 'Y-m-d H:i:s' ),
 				$e->format( 'Y-m-d H:i:s' )
 			)
 		);
+		return self::read_failed() ? PHP_INT_MAX : (int) $count;
 	}
 
-	private static function count_bookings_for_week( int $event_type_id, string $date ): int {
+	private static function count_bookings_for_week( int $event_type_id, string $date, int $exclude_booking_id = 0 ): int {
 		global $wpdb;
 		$utc_tz   = new DateTimeZone( 'UTC' );
 		$admin_tz = self::admin_tz();
@@ -428,16 +490,18 @@ class MWM_Availability {
 		$start    = $d->modify( 'monday this week' )->setTime( 0, 0, 0 )->setTimezone( $utc_tz );
 		$end      = $d->modify( 'sunday this week' )->setTime( 23, 59, 59 )->setTimezone( $utc_tz );
 
-		return (int) $wpdb->get_var(
+		$count = $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT COUNT(*) FROM {$wpdb->prefix}mwm_bookings
-             WHERE event_type_id = %d AND status = 'confirmed'
+             WHERE event_type_id = %d AND status = 'confirmed' AND id != %d
                AND start_datetime >= %s AND start_datetime <= %s",
 				$event_type_id,
+				$exclude_booking_id,
 				$start->format( 'Y-m-d H:i:s' ),
 				$end->format( 'Y-m-d H:i:s' )
 			)
 		);
+		return self::read_failed() ? PHP_INT_MAX : (int) $count;
 	}
 
 	/**

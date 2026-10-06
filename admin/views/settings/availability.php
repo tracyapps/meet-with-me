@@ -58,7 +58,7 @@ $base_url = add_query_arg(
 		</p>
 
 		<form method="post" action="">
-			<?php wp_nonce_field( 'mwm_availability_schedule' ); ?>
+			<?php wp_nonce_field( 'mwm_availability_schedule', '_mwm_schedule_nonce' ); ?>
 
 			<div class="mwm-schedule-grid">
 				<?php
@@ -174,7 +174,7 @@ $base_url = add_query_arg(
 			</button>
 
 			<form method="post" action="" id="mwm-override-form" class="mwm-inline-form" style="display:none;">
-				<?php wp_nonce_field( 'mwm_add_override' ); ?>
+				<?php wp_nonce_field( 'mwm_add_override', '_mwm_override_nonce' ); ?>
 
 				<div class="mwm-inline-form-fields">
 					<div class="mwm-inline-field">
@@ -273,7 +273,7 @@ $base_url = add_query_arg(
 			</button>
 
 			<form method="post" action="" id="mwm-blocked-form" class="mwm-inline-form" style="display:none;">
-				<?php wp_nonce_field( 'mwm_add_blocked' ); ?>
+				<?php wp_nonce_field( 'mwm_add_blocked', '_mwm_blocked_nonce' ); ?>
 
 				<div class="mwm-inline-form-fields">
 					<div class="mwm-inline-field">

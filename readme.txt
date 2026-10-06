@@ -1,6 +1,6 @@
 === Meet With Me ===
 Contributors: tracyapps
-Tags: booking, appointments, scheduling, calendar, zoom, google-calendar
+Tags: booking, appointments, scheduling, calendar, zoom
 Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 8.1
@@ -8,11 +8,11 @@ Stable tag: 0.3.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-A flexible appointment booking plugin. Create meeting types, set your availability, and let people book time with you — directly from your WordPress site.
+Create meeting types, set availability, and accept appointment bookings directly on your WordPress site.
 
 == Description ==
 
-Meet With Me does appointment scheduling the WordPress way: no external service required, your data stays in your own site.
+Meet With Me stores bookings in your WordPress database. Google Calendar and Zoom are optional connections; enabling them shares the meeting details described below with those services.
 
 **Features**
 
@@ -28,6 +28,32 @@ Meet With Me does appointment scheduling the WordPress way: no external service 
 * Optional Zoom integration: Server-to-Server OAuth, automatic meeting creation
 * Style settings: accent color, button style, corner radius, density, surfaces, custom CSS
 * Translation-ready (text domain: `meet-with-me`), privacy-policy tooling included
+
+== External Services ==
+
+The plugin makes no Google, Zoom, or relay request until an administrator configures or starts that connection. WordPress sends booking email through your site's mail server or configured SMTP provider.
+
+= Google Calendar and Google Meet =
+
+After an administrator connects a Google account, the plugin exchanges OAuth credentials and tokens with Google, loads calendar names/IDs, and sends selected calendar IDs and date/time ranges to check busy periods. With calendar write-back enabled, booking creation, cancellation, and rescheduling create or delete events. Event creation sends the meeting title, host/booker names and email addresses, meeting time, booking notes, and attendee join link; Google can send invitations to those attendees. Host-only meeting start links are excluded from attendee calendar descriptions.
+
+Service: https://developers.google.com/calendar/api
+Privacy: https://policies.google.com/privacy
+Terms: https://policies.google.com/terms
+
+= Zoom =
+
+After an administrator configures Zoom Server-to-Server OAuth, testing the connection or creating a Zoom meeting requests an access token using the configured account ID, client ID, and client secret. Creating a booking with Zoom selected sends its title (including the booker's name), notes, start time, and duration to create a meeting. Cancellation and rescheduling can delete the associated meeting. Zoom returns participant/host links and meeting details, which are stored in the site's database.
+
+Service: https://developers.zoom.us/docs/api/
+Privacy: https://www.zoom.com/en/trust/privacy/privacy-statement/
+Terms: https://www.zoom.com/en/trust/terms/
+
+= Optional plugins.tapps.design Google connection relay =
+
+The one-click connection is available only when a shared relay client ID is configured. When an administrator chooses it, https://plugins.tapps.design/connect handles the site's callback URL, temporary connection ticket, Google's authorization code, and OAuth connection tokens/credentials during the handoff. The WordPress site then communicates directly with Google for calendar operations; booking details are not routed through the relay. The advanced own-Google-project flow bypasses this relay.
+
+Relay privacy and software license/warranty terms: https://plugins.tapps.design/privacy/
 
 == Installation ==
 
@@ -60,7 +86,7 @@ WordPress sends email through your server, which some hosts restrict. Use an SMT
 
 = How do bookers cancel or reschedule? =
 
-Every confirmation email contains a private manage link. Bookers can cancel or pick a new time themselves; changes inside your minimum-notice window are blocked automatically.
+Every confirmation email contains a private manage link. Bookers can cancel or pick a new time themselves; rescheduling inside your minimum-notice window is blocked automatically.
 
 = What happens to my data if I delete the plugin? =
 
@@ -69,6 +95,9 @@ Uninstalling removes all plugin options, transients, and booking data — includ
 == Changelog ==
 
 = 0.3.0 =
+* Booking safety: host-wide locking, transactional reschedules, guarded token/status transitions and checked database failures.
+* Availability: strict dates and request types, combined meeting buffers, fresh Google verification, and token-protected reschedule availability that excludes the current booking from limits.
+* Privacy: host-only meeting links excluded from attendee calendar descriptions; private manage-page headers and external-service disclosures.
 * Gutenberg blocks: Booking Form, Booking Button, and Meeting Type Cards (server-side rendered with live editor previews, no build step). Booking styles/scripts and the modal now load only on pages that actually contain booking UI; shortcodes are unchanged.
 * Accessibility: modal focus management, focus trap, and background inert; live-region announcements for loading, errors, and results; per-instance element IDs; full-date calendar labels; enlarged close button target.
 * Security: constant-time token comparison; transient-based booking rate limiting; duplicate-slot insert protection with a unique index; secrets are no longer echoed back into the admin UI (blank keeps, "Replace secret" updates).

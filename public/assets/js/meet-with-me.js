@@ -140,6 +140,7 @@
         // -- Render -----------------------------------------------------------
 
         _render() {
+            if (this._destroyed) return;
             const stepChanged = this._lastStep !== undefined && this.s.step !== this._lastStep;
             if (stepChanged) this._pendingStepFocus = true;
 
@@ -520,9 +521,12 @@
         _bind() {
             if (this._isBound) return;
             this._isBound = true;
-            this.el.addEventListener('click',  e => this._onClick(e),  { passive: true });
-            this.el.addEventListener('change', e => this._onChange(e), { passive: true });
-            this.el.addEventListener('submit', e => this._onSubmit(e));
+            this._onElClick = e => this._onClick(e);
+            this._onElChange = e => this._onChange(e);
+            this._onElSubmit = e => this._onSubmit(e);
+            this.el.addEventListener('click', this._onElClick, { passive: true });
+            this.el.addEventListener('change', this._onElChange, { passive: true });
+            this.el.addEventListener('submit', this._onElSubmit);
             this._onDocClick = e => {
                 if (!this.s.monthPickerOpen) return;
                 if (!this.container.contains(e.target)) this._closeMonthPicker(false);
@@ -540,6 +544,15 @@
          * keep a stale open month picker).
          */
         destroy() {
+            this._destroyed = true;
+            ++this._eventTypesRequestId;
+            ++this._monthRequestId;
+            ++this._slotsRequestId;
+            this.el.removeEventListener('click', this._onElClick);
+            this.el.removeEventListener('change', this._onElChange);
+            this.el.removeEventListener('submit', this._onElSubmit);
+            this._livePolite.remove();
+            this._liveAssertive.remove();
             if (this._onDocClick) document.removeEventListener('click', this._onDocClick);
             if (this._onDocKeydown) document.removeEventListener('keydown', this._onDocKeydown);
             this._onDocClick = null;
@@ -657,6 +670,19 @@
 
         // -- Async loaders ----------------------------------------------------
 
+        _fetchAvailability(path) {
+            const context = this.options && this.options.rescheduleContext;
+            if (!context) return api(path);
+            const params = new URLSearchParams(path.split('?')[1]);
+            const body = { reschedule_token: context.token, timezone: this.tz };
+            if (params.has('date')) body.date = params.get('date');
+            else {
+                body.year = Number(params.get('year'));
+                body.month = Number(params.get('month'));
+            }
+            return api(`/bookings/${context.id}/availability`, { method: 'POST', body: JSON.stringify(body) });
+        }
+
         async _loadEventTypes() {
             const requestId = ++this._eventTypesRequestId;
             this._set({ loading: true, error: null });
@@ -686,7 +712,7 @@
             this._announce(t('loadingDates', 'Loading available dates…'));
             this._set({ loading: true, error: null, availableDates: null });
             try {
-                const d = await api(`/availability/month?event_type=${this.s.eventType.slug}&year=${this.s.year}&month=${this.s.month}&tz=${encodeURIComponent(this.tz)}`);
+                const d = await this._fetchAvailability(`/availability/month?event_type=${this.s.eventType.slug}&year=${this.s.year}&month=${this.s.month}&tz=${encodeURIComponent(this.tz)}`);
                 if (requestId !== this._monthRequestId) return;
                 this._set({ availableDates: d.available_dates, loading: false });
                 if (d.available_dates.length) {
@@ -706,7 +732,7 @@
             this._announce(t('loadingTimes', 'Loading available times…'));
             this._set({ loading: true, error: null, slots: null });
             try {
-                const d = await api(`/availability/slots?event_type=${this.s.eventType.slug}&date=${this.s.date}&tz=${encodeURIComponent(this.tz)}`);
+                const d = await this._fetchAvailability(`/availability/slots?event_type=${this.s.eventType.slug}&date=${this.s.date}&tz=${encodeURIComponent(this.tz)}`);
                 if (requestId !== this._slotsRequestId) return;
                 this._set({ slots: d.slots, loading: false });
                 this._announce(d.slots.length
@@ -787,7 +813,12 @@
 
         // -- Helpers ----------------------------------------------------------
 
-        _set(patch) { Object.assign(this.s, patch); this._render(); }
+        _set(patch) {
+            if (this._destroyed) return;
+            Object.assign(this.s, patch);
+            if (patch.slot === null && this.options && this.options.onSlotPicked) this.options.onSlotPicked(null);
+            this._render();
+        }
 
         _today() {
             const today = new Date();
@@ -944,6 +975,9 @@
         }
 
         _showView() {
+            if (this.reschedWizard) this.reschedWizard.destroy();
+            this.reschedWizard = null;
+            this._pendingSlot = null;
             this.mode = 'view';
             this._actionsWrap.innerHTML = `
 <div class="mwm-manage__btns">
@@ -993,6 +1027,8 @@
         }
 
         _showReschedule() {
+            if (this.reschedWizard) this.reschedWizard.destroy();
+            this._pendingSlot = null;
             this.mode = 'rescheduling';
             this._actionsWrap.innerHTML = `<button class="mwm-btn-secondary" style="margin-bottom:16px" data-a="abort-reschedule">${this._e(t('backToBooking', '← Back to booking'))}</button>`;
             this._reschedWrap.hidden = false;
@@ -1009,13 +1045,22 @@
 
             // Instantiate a sub-wizard for date/slot picking only (steps 2+3)
             const wizEl = this._reschedWrap.querySelector('.mwm-booking-wizard');
-            this.reschedWizard = new MWMWizard(wizEl, { rescheduleMode: true, onSlotPicked: (slot) => this._onSlotPicked(slot) });
+            this.reschedWizard = new MWMWizard(wizEl, {
+                rescheduleMode: true,
+                rescheduleContext: { id: this.data.id, token: this.data.reschedule_token },
+                onSlotPicked: (slot) => this._onSlotPicked(slot),
+            });
         }
 
         _onSlotPicked(slot) {
             this._pendingSlot = slot;
             const confirm = this._reschedWrap.querySelector('.mwm-manage__slot-confirm');
             const label   = this._reschedWrap.querySelector('.mwm-manage__slot-selected');
+            if (!slot) {
+                if (label) label.textContent = '';
+                if (confirm) confirm.hidden = true;
+                return;
+            }
             if (label) label.textContent = fmt(t('newTime', 'New time: %s'), slot.start_local);
             if (confirm) confirm.hidden = false;
         }
@@ -1036,6 +1081,8 @@
                 });
                 this.newBooking = res.booking;
                 this.mode = 'rescheduled';
+                if (this.reschedWizard) this.reschedWizard.destroy();
+                this.reschedWizard = null;
                 this._reschedWrap.hidden = true;
                 this._actionsWrap.innerHTML = `
 <div class="mwm-manage__success">

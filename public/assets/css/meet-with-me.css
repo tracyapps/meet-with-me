@@ -489,6 +489,8 @@
     flex-wrap: wrap;
 }
 
+.mwm-manage__slot-confirm[hidden] { display: none; }
+
 .mwm-manage__slot-selected {
     margin: 0;
     font-weight: 600;

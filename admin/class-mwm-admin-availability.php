@@ -42,7 +42,7 @@ class MWM_Admin_Availability {
 	// -------------------------------------------------------------------------
 
 	private function handle_save_schedule(): void {
-		check_admin_referer( 'mwm_availability_schedule' );
+		check_admin_referer( 'mwm_availability_schedule', '_mwm_schedule_nonce' );
 		global $wpdb;
 
 		// Delete all existing weekly rules and re-insert
@@ -83,7 +83,7 @@ class MWM_Admin_Availability {
 	}
 
 	private function handle_add_override(): void {
-		check_admin_referer( 'mwm_add_override' );
+		check_admin_referer( 'mwm_add_override', '_mwm_override_nonce' );
 		global $wpdb;
 
 		$date      = sanitize_text_field( wp_unslash( $_POST['override_date'] ?? '' ) );
@@ -121,7 +121,7 @@ class MWM_Admin_Availability {
 	}
 
 	private function handle_add_blocked(): void {
-		check_admin_referer( 'mwm_add_blocked' );
+		check_admin_referer( 'mwm_add_blocked', '_mwm_blocked_nonce' );
 		global $wpdb;
 
 		$date   = sanitize_text_field( wp_unslash( $_POST['blocked_date'] ?? '' ) );

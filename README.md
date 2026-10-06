@@ -23,6 +23,7 @@ A flexible appointment booking plugin for WordPress. Create meeting types, set y
 10. [PHP API](#php-api)
 11. [CSS Customization](#css-customization)
 12. [Google Calendar Setup](#google-calendar-setup)
+13. [External Services and Operations](#external-services-and-operations)
 
 ---
 
@@ -433,7 +434,7 @@ Create a new booking.
 }
 ```
 
-**Error responses:** `400` missing/invalid fields, `404` event type not found, `409` slot no longer available, `500` DB failure.
+**Error responses:** `400` missing/invalid fields, `404` event type not found, `409` slot no longer available, `429` rate limit, `500` save failure, `503` unavailable database/calendar verification or busy host lock. Retry `503` shortly; availability is not a reservation.
 
 ---
 
@@ -484,6 +485,10 @@ Reschedule a confirmed booking to a new time slot.
 **Error responses:** `400` missing fields, `403` invalid token, `409` too close to meeting / slot unavailable, `404` event type not found, `500` DB failure.
 
 The original booking is marked `rescheduled`. A new confirmed booking is created inheriting all booker details. The `mwm_booking_rescheduled` action fires.
+
+### `POST /bookings/{id}/availability`
+
+The reschedule wizard sends its `reschedule_token`, `timezone` and either a canonical `date` (`YYYY-MM-DD`) or integer `year`/`month` in the JSON body. A valid token for a confirmed booking returns the same slots/month response as the public availability routes, excluding that booking from conflicts and daily/weekly limits. Tokens stay out of the request URL and responses use private/no-store caching. Public GET availability never honors an exclusion supplied by a visitor. Invalid tokens return `403`, inactive bookings `409`, invalid dates/months `400`, and failed availability verification `503`.
 
 ---
 
@@ -701,8 +706,12 @@ $blocked = MWM_Availability::get_blocked_dates();
 // Check whether OAuth is connected
 if ( MWM_Google_Calendar::is_connected() ) { ... }
 
-// Get busy periods for a date (returns array of ['start' => DT, 'end' => DT] in UTC)
+// Returns UTC busy periods or WP_Error when connected availability cannot be verified.
+// Pass true immediately before a booking mutation to bypass the display cache.
 $busy = MWM_Google_Calendar::get_busy_periods_for_date( '2026-04-07', $admin_tz );
+if ( is_wp_error( $busy ) ) {
+    // Treat availability as unavailable and ask the caller to retry.
+}
 
 // Write a booking to Google Calendar; returns the event ID or null
 $gcal_id = MWM_Google_Calendar::create_event( $booking, $event_type );
@@ -826,4 +835,19 @@ To disconnect: click **Disconnect** in the Google Calendar settings tab. This cl
 
 ## Changelog
 
-See [CHANGELOG.md](CHANGELOG.md) for the full history. Current release: **0.3.0**.
+See [CHANGELOG.md](CHANGELOG.md) for the full history. Development version: **0.3.0** (unreleased).
+
+## External Services and Operations
+
+Bookings and connection credentials are stored in the site's WordPress database. Google Calendar and Zoom are optional. Review the selected integrations and update the site's privacy notice before accepting bookings. Protect database backups and restrict administrator access: the stored OAuth credentials and Zoom host links grant access to the connected services.
+
+- **Google Calendar/Meet:** administrator authorization exchanges credentials/tokens with Google; calendar selection loads calendar names/IDs; availability reads send calendar IDs and time ranges. Calendar write-back sends meeting titles, host/booker names and email addresses, times, notes, and participant join links. Creating, cancelling, and rescheduling bookings may create/delete events and send attendee invitations. Host-only start links are excluded from shared event descriptions. [Google privacy](https://policies.google.com/privacy), [Google terms](https://policies.google.com/terms).
+- **Zoom:** configured Server-to-Server OAuth sends account/client credentials to obtain an access token. Creating an online meeting sends its title (including the booker's name), notes, time, and duration; cancellation/rescheduling may delete the associated meeting. Returned meeting details and participant/host links are stored locally. [Zoom privacy](https://www.zoom.com/en/trust/privacy/privacy-statement/), [Zoom terms](https://www.zoom.com/en/trust/terms/).
+- **Optional connection relay:** a configured shared client ID enables the one-click Google flow through `https://plugins.tapps.design/connect`. During connection, it handles the site callback URL, temporary ticket, Google's authorization code, and connection tokens/credentials. Calendar operations subsequently run directly between WordPress and Google. The advanced own-project flow bypasses the relay. [Relay privacy and software license/warranty terms](https://plugins.tapps.design/privacy/).
+- **Email:** WordPress uses the site's mail server or configured SMTP provider to deliver booking details and private manage links. Confirm that delivery works before launch.
+
+Availability displays can cache verified Google busy periods for ten minutes. Booking mutations request fresh results. A failed token refresh, transport request, selected-calendar result, or malformed busy response returns an unavailable-calendar error instead of treating the calendar as free. The site owner should reconnect Google or resolve the provider failure when availability cannot be verified.
+
+Private manage pages send `Cache-Control: private, no-store`, `Referrer-Policy: no-referrer`, and indexing exclusions. Configure upstream caches/CDNs to bypass requests containing `mwm_token`; an upstream cached response can be served before WordPress applies these headers. Treat manage links as private capabilities. Keep `{meeting_host_url}` out of booker-facing email templates; use it only in administrator notifications.
+
+Public booking mutations require the site's booking table to use InnoDB and a working MySQL advisory lock. The host-wide lock serializes availability checks and booking transitions, including different meeting types and buffers. Booking changes commit before the existing synchronous provider/email hooks run; the lock remains held through those hooks to protect reused booking IDs, so a slow provider can delay another booking request. Provider actions are not part of the database transaction and a remote failure does not roll back the saved booking. Review provider connection notices and test the configured Google/Zoom and email flows before launch.

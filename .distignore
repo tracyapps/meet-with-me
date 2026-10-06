@@ -6,7 +6,9 @@
 .git
 .github
 .gitignore
+.gitattributes
 .distignore
+.phpunit.result.cache
 .DS_Store
 .ds_store
 node_modules/
@@ -18,4 +20,3 @@ phpunit.xml.dist
 tests/
 bin/
 docs/
-README.md

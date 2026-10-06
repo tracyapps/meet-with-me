@@ -2,6 +2,10 @@
 /**
  * Dependencies for the Booking Form block editor script (no build step).
  */
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 return array(
 	'dependencies' => array(
 		'wp-blocks',

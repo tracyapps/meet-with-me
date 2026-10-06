@@ -2,10 +2,16 @@
 
 All notable changes to Meet With Me are documented here.
 
-## 0.3.0 — 2026-10-03
+## 0.3.0 — 2026-10-06
 
 Professionalization pass (release prep):
 
+- **Booking safety** — serialize public booking changes across meeting types with a host-wide MySQL advisory lock; require InnoDB and transact reschedules; check every state transition before committing or firing hooks; guard cancellation and provider writes with the original token/status; reject stale manage tokens after a slot is reused.
+- **Availability correctness** — fail closed on database and Google Calendar read failures; refresh calendar busy data before booking mutations; validate real dates and scalar request fields; compare the combined buffers of both meetings; exclude the current booking from reschedule limits using a private token-protected availability request.
+- **Privacy and packaging** — exclude host-only meeting links from attendee calendar descriptions; send private/no-store, no-referrer and indexing exclusions on manage pages; document optional external services and hosting requirements; include the GPL license and operator README in clean distribution ZIPs.
+- **Regression coverage** — add public booking lifecycle, SQL failure/rollback, lock contention, combined-buffer, private reschedule availability and Google payload/failure tests.
+- **Wizard lifecycle** — hide reschedule confirmation until a time is selected, clear abandoned selections, and remove wizard listeners/live regions when closing or leaving a flow; ignore late responses after teardown.
+- **Admin accessibility** — associate internal notes and custom duration inputs with labels, improve Delete button contrast, enlarge question reorder/remove controls, and keep the meeting editor within mobile viewport bounds.
 - **Accessibility (WCAG 2.2 AA)** — modal focus management (save/restore trigger, focus trap, background `inert`), wizard step focus and live-region announcements, persistent polite/assertive live regions, correct slots/calendar semantics (no more misuse of `listbox`/`dialog` roles), full-date accessible names on calendar days, per-instance DOM IDs to avoid duplicates, keyboard-accessible field reordering in the admin, keyboard-operable copy-to-clipboard with announcements, larger modal close target, `prefers-reduced-motion` support, tunable muted-text contrast.
 - **Security & correctness** — fixed the broken "Refresh My Calendars" nonce; stored secrets are never re-rendered into admin HTML (blank keeps the existing secret; explicit "Replace secret" flow); transient-based rate limiting on public bookings (filterable); constant-time token comparison (`hash_equals`) for cancel/reschedule; duplicate-slot protection (unique index + duplicate-key handling, 409 instead of 500); `jquery-ui-sortable` registered so drag-reorder works; complete uninstall (multisite-aware, removes all options/transients); assorted PHP notices and `wp_date()` fixes.
 - **Rebooking freed slots** — a cancelled/rescheduled slot is bookable again: the duplicate-key path now reactivates the single existing slot row in place with the new booking's details and freshly generated cancel/reschedule tokens (no stale manage links; true races against a still-confirmed occupant still return `409`).

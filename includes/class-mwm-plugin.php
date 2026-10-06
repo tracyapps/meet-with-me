@@ -150,6 +150,7 @@ class MWM_Plugin {
 		$content  = '<p>' . esc_html__( 'Meet With Me stores booking information submitted through its booking forms: the booker’s name, email address, optional phone number and notes, answers to any custom booking questions, the chosen meeting time, and the booker’s timezone.', 'meet-with-me' ) . '</p>';
 		$content .= '<p>' . esc_html__( 'This information is used solely to schedule and manage the requested meeting, to send booking notifications, and to manage cancellations and reschedules. It is stored in the site’s WordPress database and retained until an administrator deletes the booking or uninstalls the plugin.', 'meet-with-me' ) . '</p>';
 		$content .= '<p>' . esc_html__( 'If Google Calendar or Zoom integrations are enabled, meeting details are shared with those services as needed to create calendar events and online meeting links. Bookers can request deletion of their data by contacting the site owner.', 'meet-with-me' ) . '</p>';
+		$content .= '<p>' . esc_html__( 'If the administrator uses the optional plugins.tapps.design Google connection relay, that service handles the site callback URL, temporary connection ticket, authorization code, and OAuth tokens during connection. Subsequent calendar operations communicate directly with Google. Booking emails use the site’s configured mail provider.', 'meet-with-me' ) . '</p>';
 
 		wp_add_privacy_policy_content( 'Meet With Me', wp_kses_post( $content ) );
 	}
@@ -178,14 +179,14 @@ class MWM_Plugin {
 			function () use ( $booking, $event_type, &$updates ) {
 				$updates = MWM_Online_Meetings::create_for_booking( $booking, $event_type );
 				if ( is_array( $updates ) && ! empty( $updates ) ) {
-					MWM_Booking::update( $booking['id'], $updates );
+					MWM_Booking::update( $booking['id'], $updates, $booking['cancel_token'] );
 				}
 			}
 		);
 
 		if ( is_array( $updates ) && ! empty( $updates ) ) {
 			$fresh = MWM_Booking::get( $booking['id'] );
-			if ( $fresh ) {
+			if ( $fresh && $fresh['status'] === 'confirmed' && hash_equals( $booking['cancel_token'], $fresh['cancel_token'] ) ) {
 				return $fresh;
 			}
 		}
@@ -204,14 +205,14 @@ class MWM_Plugin {
 			function () use ( $booking, $event_type, &$gcal_id ) {
 				$gcal_id = MWM_Google_Calendar::create_event( $booking, $event_type );
 				if ( $gcal_id ) {
-					MWM_Booking::update( $booking['id'], array( 'gcal_event_id' => $gcal_id ) );
+					MWM_Booking::update( $booking['id'], array( 'gcal_event_id' => $gcal_id ), $booking['cancel_token'] );
 				}
 			}
 		);
 
 		if ( $gcal_id ) {
 			$fresh = MWM_Booking::get( $booking['id'] );
-			if ( $fresh ) {
+			if ( $fresh && $fresh['status'] === 'confirmed' && hash_equals( $booking['cancel_token'], $fresh['cancel_token'] ) ) {
 				return $fresh;
 			}
 		}

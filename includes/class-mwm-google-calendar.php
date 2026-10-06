@@ -238,11 +238,12 @@ class MWM_Google_Calendar {
 	 * Get busy periods for a specific date (in admin timezone).
 	 * Results are cached per transient for 10 minutes.
 	 *
-	 * @param string       $date      'Y-m-d' in admin timezone.
-	 * @param DateTimeZone $admin_tz
-	 * @return array[]  Each item: { start: DateTimeImmutable(UTC), end: DateTimeImmutable(UTC) }
+	 * @param string       $date          'Y-m-d' in admin timezone.
+	 * @param DateTimeZone $admin_tz      Admin timezone.
+	 * @param bool         $force_refresh Skip cached busy periods before a booking mutation.
+	 * @return array|WP_Error Busy periods in UTC, or an unavailable-calendar error.
 	 */
-	public static function get_busy_periods_for_date( string $date, DateTimeZone $admin_tz ): array {
+	public static function get_busy_periods_for_date( string $date, DateTimeZone $admin_tz, bool $force_refresh = false ): array|WP_Error {
 		if ( ! self::is_connected() ) {
 			return array();
 		}
@@ -251,20 +252,32 @@ class MWM_Google_Calendar {
 		if ( empty( $calendar_ids ) ) {
 			return array();
 		}
+		if ( ! is_array( $calendar_ids ) ) {
+			return self::busy_unavailable();
+		}
+		foreach ( $calendar_ids as $calendar_id ) {
+			if ( ! is_string( $calendar_id ) || $calendar_id === '' ) {
+				return self::busy_unavailable();
+			}
+		}
 
 		$utc_tz    = new DateTimeZone( 'UTC' );
 		$day_start = ( new DateTimeImmutable( "{$date} 00:00:00", $admin_tz ) )->setTimezone( $utc_tz );
 		$day_end   = ( new DateTimeImmutable( "{$date} 23:59:59", $admin_tz ) )->setTimezone( $utc_tz );
 
-		$raw = self::get_busy_for_range( $day_start, $day_end, $calendar_ids );
-
-		return array_map(
-			fn( $b ) => array(
-				'start' => new DateTimeImmutable( $b['start'], $utc_tz ),
-				'end'   => new DateTimeImmutable( $b['end'], $utc_tz ),
-			),
-			$raw
-		);
+		$raw = self::get_busy_for_range( $day_start, $day_end, $calendar_ids, $force_refresh );
+		if ( is_wp_error( $raw ) ) {
+			return $raw;
+		}
+		$busy = array();
+		foreach ( $raw as $period ) {
+			$parsed = self::parse_busy_period( $period, $utc_tz );
+			if ( is_wp_error( $parsed ) ) {
+				return $parsed;
+			}
+			$busy[] = $parsed;
+		}
+		return $busy;
 	}
 
 	/**
@@ -274,19 +287,20 @@ class MWM_Google_Calendar {
 	 * @param DateTimeImmutable $start
 	 * @param DateTimeImmutable $end
 	 * @param array             $calendar_ids
-	 * @return array[]  Each item: { start: string(ISO8601), end: string(ISO8601) }
+	 * @param bool              $force_refresh Bypass the presentation cache.
+	 * @return array|WP_Error Raw busy periods, or an unavailable-calendar error.
 	 */
-	private static function get_busy_for_range( DateTimeImmutable $start, DateTimeImmutable $end, array $calendar_ids ): array {
+	private static function get_busy_for_range( DateTimeImmutable $start, DateTimeImmutable $end, array $calendar_ids, bool $force_refresh = false ): array|WP_Error {
 		$cache_key = 'mwm_freebusy_' . md5( $start->format( 'c' ) . $end->format( 'c' ) . implode( ',', $calendar_ids ) );
 		$cached    = get_transient( $cache_key );
 
-		if ( $cached !== false ) {
+		if ( ! $force_refresh && is_array( $cached ) ) {
 			return $cached;
 		}
 
 		$token = self::get_valid_access_token();
 		if ( ! $token ) {
-			return array();
+			return self::busy_unavailable();
 		}
 
 		$items    = array_map( fn( $id ) => array( 'id' => $id ), $calendar_ids );
@@ -309,14 +323,24 @@ class MWM_Google_Calendar {
 		);
 
 		if ( is_wp_error( $response ) || wp_remote_retrieve_response_code( $response ) !== 200 ) {
-			return array();
+			return self::busy_unavailable();
 		}
 
-		$data = json_decode( wp_remote_retrieve_body( $response ), true );
-		$busy = array();
-
-		foreach ( ( $data['calendars'] ?? array() ) as $cal_data ) {
-			foreach ( ( $cal_data['busy'] ?? array() ) as $period ) {
+		$data   = json_decode( wp_remote_retrieve_body( $response ), true );
+		$busy   = array();
+		$utc_tz = new DateTimeZone( 'UTC' );
+		if ( ! is_array( $data ) || ! is_array( $data['calendars'] ?? null ) || ! empty( $data['error'] ) || ! empty( $data['errors'] ) ) {
+			return self::busy_unavailable();
+		}
+		foreach ( $calendar_ids as $calendar_id ) {
+			$cal_data = $data['calendars'][ $calendar_id ] ?? null;
+			if ( ! is_array( $cal_data ) || ! empty( $cal_data['errors'] ) || ! is_array( $cal_data['busy'] ?? null ) ) {
+				return self::busy_unavailable();
+			}
+			foreach ( $cal_data['busy'] as $period ) {
+				if ( is_wp_error( self::parse_busy_period( $period, $utc_tz ) ) ) {
+					return self::busy_unavailable();
+				}
 				$busy[] = array(
 					'start' => $period['start'],
 					'end'   => $period['end'],
@@ -326,6 +350,38 @@ class MWM_Google_Calendar {
 
 		set_transient( $cache_key, $busy, 10 * MINUTE_IN_SECONDS );
 		return $busy;
+	}
+
+	/** Validate provider timestamps before caching or treating them as busy intervals. */
+	private static function parse_busy_period( mixed $period, DateTimeZone $utc_tz ): array|WP_Error {
+		$pattern = '/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/D';
+		if ( ! is_array( $period ) || ! is_string( $period['start'] ?? null ) || ! is_string( $period['end'] ?? null ) || ! preg_match( $pattern, $period['start'] ) || ! preg_match( $pattern, $period['end'] ) ) {
+			return self::busy_unavailable();
+		}
+		try {
+			$start        = new DateTimeImmutable( $period['start'], $utc_tz );
+			$start_errors = DateTimeImmutable::getLastErrors();
+			$end          = new DateTimeImmutable( $period['end'], $utc_tz );
+			$end_errors   = DateTimeImmutable::getLastErrors();
+		} catch ( \Exception $e ) {
+			return self::busy_unavailable();
+		}
+		if ( $end <= $start || ( is_array( $start_errors ) && ( $start_errors['warning_count'] || $start_errors['error_count'] ) ) || ( is_array( $end_errors ) && ( $end_errors['warning_count'] || $end_errors['error_count'] ) ) ) {
+			return self::busy_unavailable();
+		}
+		return array(
+			'start' => $start->setTimezone( $utc_tz ),
+			'end'   => $end->setTimezone( $utc_tz ),
+		);
+	}
+
+	/** Return a retryable error without exposing OAuth credentials or provider responses. */
+	private static function busy_unavailable(): WP_Error {
+		return new WP_Error(
+			'mwm_google_busy_unavailable',
+			__( 'Google Calendar availability could not be verified. Please try again later or contact the site owner.', 'meet-with-me' ),
+			array( 'status' => 503 )
+		);
 	}
 
 	// -------------------------------------------------------------------------
@@ -384,11 +440,6 @@ class MWM_Google_Calendar {
 		if ( ! empty( $booking['meeting_join_url'] ) ) {
 			/* translators: %s: meeting join URL. */
 			$description_lines[] = sprintf( __( 'Join link: %s', 'meet-with-me' ), $booking['meeting_join_url'] );
-		}
-
-		if ( ! empty( $booking['meeting_host_url'] ) ) {
-			/* translators: %s: host start URL. */
-			$description_lines[] = sprintf( __( 'Host link: %s', 'meet-with-me' ), $booking['meeting_host_url'] );
 		}
 
 		$description = implode( "\n", $description_lines );

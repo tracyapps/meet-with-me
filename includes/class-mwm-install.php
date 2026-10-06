@@ -80,7 +80,7 @@ class MWM_Install {
 			KEY event_type_id (event_type_id),
 			KEY start_datetime (start_datetime),
 			KEY status (status)
-		) $charset_collate;"
+		) ENGINE=InnoDB $charset_collate;"
 		);
 
 		dbDelta(

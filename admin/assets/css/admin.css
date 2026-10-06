@@ -70,11 +70,12 @@
 
 /* ---- Duration field ---- */
 
-.mwm-duration-field { display: flex; align-items: center; gap: 12px; }
+.mwm-duration-field { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 
 /* ---- Slug field ---- */
 
 .mwm-slug-field { display: flex; align-items: center; gap: 8px; }
+.mwm-slug-field .regular-text { min-width: 0; max-width: 100%; }
 
 /* ---- Sidebar actions ---- */
 
@@ -132,7 +133,7 @@
 .mwm-badge--active { background: #d8f3dc; color: #1a7431; }
 .mwm-badge--inactive { background: #f0f0f1; color: #666; }
 
-.mwm-delete-btn { color: #d63638 !important; margin-left: 4px; }
+.mwm-delete-btn { color: #b32d2e !important; margin-left: 4px; }
 .mwm-delete-btn:hover { background: #d63638 !important; color: #fff !important; border-color: #d63638 !important; }
 
 .mwm-empty-state {
@@ -217,7 +218,7 @@
 /* ---- Responsive ---- */
 
 @media screen and (max-width: 900px) {
-    .mwm-edit-layout { flex-direction: column; }
+    .mwm-edit-layout { flex-direction: column; align-items: stretch; }
     .mwm-edit-sidebar { width: 100%; }
 }
 
@@ -452,7 +453,20 @@
 /* ---- Field row reorder buttons ---- */
 
 .mwm-field-row-up,
-.mwm-field-row-down { flex-shrink: 0; font-size: 0.8em; line-height: 1; padding: 2px 4px; }
+.mwm-field-row-down,
+.mwm-fl-remove,
+.mwm-option-remove {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    min-height: 32px;
+    box-sizing: border-box;
+    font-size: 1em;
+    line-height: 1;
+    padding: 4px;
+}
 
 /* Advanced: own Google project disclosure on the Google settings tab. */
 .mwm-gcal-advanced {

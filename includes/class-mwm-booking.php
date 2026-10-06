@@ -11,6 +11,12 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class MWM_Booking {
 
+	/** Host-wide lock name, scoped to this site's database and table prefix. */
+	public static function lock_name(): string {
+		global $wpdb;
+		return 'mwm_booking_' . substr( hash( 'sha256', DB_NAME . '|' . $wpdb->prefix ), 0, 48 );
+	}
+
 	/**
 	 * Get a single booking by ID.
 	 */
@@ -152,21 +158,34 @@ class MWM_Booking {
 			$data['field_answers'] = wp_json_encode( $data['field_answers'] );
 		}
 
-		$clean  = self::sanitize_for_db( $data );
-		$result = $wpdb->insert( $wpdb->prefix . 'mwm_bookings', $clean );
+		$clean = self::sanitize_for_db( $data );
+		// Duplicate slots are an expected rebooking path. Do not print a query
+		// containing private booker details and tokens when debugging is enabled.
+		$previous = $wpdb->suppress_errors( true );
+		try {
+			$result = $wpdb->insert( $wpdb->prefix . 'mwm_bookings', $clean );
+		} finally {
+			$wpdb->suppress_errors( $previous );
+		}
 		return $result ? (int) $wpdb->insert_id : false;
 	}
 
 	/**
 	 * Update specific fields on a booking.
 	 */
-	public static function update( int $id, array $data ): bool {
+	public static function update( int $id, array $data, ?string $expected_token = null ): bool {
 		global $wpdb;
 		if ( isset( $data['field_answers'] ) && is_array( $data['field_answers'] ) ) {
 			$data['field_answers'] = wp_json_encode( $data['field_answers'] );
 		}
 		$clean = self::sanitize_for_db( $data );
-		return $wpdb->update( $wpdb->prefix . 'mwm_bookings', $clean, array( 'id' => $id ), null, array( '%d' ) ) !== false;
+		$where = array( 'id' => $id );
+		if ( null !== $expected_token ) {
+			$where['cancel_token'] = $expected_token;
+			$where['status']       = 'confirmed';
+		}
+		$result = $wpdb->update( $wpdb->prefix . 'mwm_bookings', $clean, $where );
+		return null === $expected_token ? false !== $result : is_int( $result ) && $result > 0;
 	}
 
 	/**
@@ -219,17 +238,24 @@ class MWM_Booking {
 	/**
 	 * Cancel a booking by ID.
 	 */
-	public static function cancel( int $id ): bool {
+	public static function cancel( int $id, ?string $expected_token = null ): bool {
 		global $wpdb;
+		$where = array(
+			'id'     => $id,
+			'status' => 'confirmed',
+		);
+		if ( null !== $expected_token ) {
+			$where['cancel_token'] = $expected_token;
+		}
 		return (bool) $wpdb->update(
 			$wpdb->prefix . 'mwm_bookings',
 			array(
 				'status'     => 'cancelled',
 				'updated_at' => current_time( 'mysql', true ),
 			),
-			array( 'id' => $id ),
+			$where,
 			array( '%s', '%s' ),
-			array( '%d' )
+			null
 		);
 	}
 

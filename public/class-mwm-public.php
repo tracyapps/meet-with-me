@@ -54,6 +54,15 @@ class MWM_Public {
 			return;
 		}
 
+		// Manage links are bearer capabilities. Keep their page and tokens private.
+		if ( ! defined( 'DONOTCACHEPAGE' ) ) {
+			define( 'DONOTCACHEPAGE', true );
+		}
+		nocache_headers();
+		header( 'Cache-Control: private, no-store, no-cache, must-revalidate, max-age=0', true );
+		header( 'Referrer-Policy: no-referrer', true );
+		header( 'X-Robots-Tag: noindex, nofollow, noarchive', true );
+
 		$admin_tz    = MWM_Settings::get( 'timezone' ) ?: 'UTC';
 		$min_notice  = (int) MWM_Settings::get( 'min_notice_hours' );
 		$now_utc     = new DateTimeImmutable( 'now', new DateTimeZone( 'UTC' ) );

@@ -152,7 +152,7 @@ if ( $is_connected ) {
 						<td>
 							<input type="text" id="client_id" name="client_id" class="large-text"
 								value="<?php echo esc_attr( $settings['client_id'] ); ?>"
-								placeholder="xxxxxxxxxx.apps.googleusercontent.com">
+								placeholder="<?php echo esc_attr( 'xxxxxxxxxx.apps.googleusercontent.com' ); // phpcs:ignore PluginCheck.CodeAnalysis.Offloading.OffloadedContent -- OAuth ID example, not a remote asset. ?>">
 						</td>
 					</tr>
 					<tr>
