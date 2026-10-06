@@ -3,7 +3,7 @@
  * Plugin Name: Meet With Me
  * Plugin URI:  https://github.com/tracyapps/meet-with-me
  * Description: A flexible appointment booking plugin. Create meeting types, set your availability, connect Google Calendar, and let people book time with you — directly from your WordPress site.
- * Version:     0.3.0
+ * Version:     0.3.1
  * Author:      Tracy Apps
  * License:     GPL-2.0-or-later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'MWM_VERSION', '0.3.0' );
+define( 'MWM_VERSION', '0.3.1' );
 define( 'MWM_PLUGIN_FILE', __FILE__ );
 define( 'MWM_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'MWM_PLUGIN_URL', plugin_dir_url( __FILE__ ) );

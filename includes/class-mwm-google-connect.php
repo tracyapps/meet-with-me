@@ -33,10 +33,12 @@ class MWM_Google_Connect {
 	private const OAUTH_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 
 	/**
-	 * The shared OAuth client id. Empty until configured via setting or
-	 * filter — the UI falls back to the bring-your-own-credentials flow.
+	 * The shared OAuth client id baked into the plugin so one-click works on
+	 * every install with zero setup. The secret never ships — it stays on the
+	 * relay. A setting or the `mwm_google_relay_client_id` filter can override
+	 * (e.g. to point a test install at a different Google project).
 	 */
-	private const DEFAULT_CLIENT_ID = '';
+	private const DEFAULT_CLIENT_ID = '764898253011-kl9j1ggnjsumkgcamiudcpl2vns9grhn.apps.googleusercontent.com';
 
 	public static function relay_url(): string {
 		/**

@@ -4,7 +4,7 @@ Tags: booking, appointments, scheduling, calendar, zoom
 Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.3.0
+Stable tag: 0.3.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -51,7 +51,7 @@ Terms: https://www.zoom.com/en/trust/terms/
 
 = Optional plugins.tapps.design Google connection relay =
 
-The one-click connection is available only when a shared relay client ID is configured. When an administrator chooses it, https://plugins.tapps.design/connect handles the site's callback URL, temporary connection ticket, Google's authorization code, and OAuth connection tokens/credentials during the handoff. The WordPress site then communicates directly with Google for calendar operations; booking details are not routed through the relay. The advanced own-Google-project flow bypasses this relay.
+The one-click connection uses the plugin's shared OAuth client by default (an administrator can still connect their own Google project instead). When an administrator chooses it, https://plugins.tapps.design/connect handles the site's callback URL, temporary connection ticket, Google's authorization code, and OAuth connection tokens/credentials during the handoff. The WordPress site then communicates directly with Google for calendar operations; booking details are not routed through the relay. The advanced own-Google-project flow bypasses this relay.
 
 Relay privacy and software license/warranty terms: https://plugins.tapps.design/privacy/
 
@@ -93,6 +93,10 @@ Every confirmation email contains a private manage link. Bookers can cancel or p
 Uninstalling removes all plugin options, transients, and booking data — including on every site of a multisite network.
 
 == Changelog ==
+
+= 0.3.1 =
+* Fixed: the one-click Google connection now works out of the box on every install — the shared connection client ID ships with the plugin (0.3.0 showed "One-click connection is not configured on this site yet" until a filter or setting supplied it).
+* Fixed: the Help & Setup settings tab renders its own page instead of falling back to General.
 
 = 0.3.0 =
 * Booking safety: host-wide locking, transactional reschedules, guarded token/status transitions and checked database failures.

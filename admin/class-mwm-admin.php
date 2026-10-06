@@ -121,7 +121,13 @@ class MWM_Admin {
 	 * tab, which has no actions of its own).
 	 */
 	private function settings_controller(): ?object {
-		$tab          = sanitize_key( wp_unslash( $_GET['tab'] ?? 'general' ) );
+		$tab = sanitize_key( wp_unslash( $_GET['tab'] ?? 'general' ) );
+
+		// The Help & Setup tab is a static view with no controller of its own.
+		if ( 'help' === $tab ) {
+			return null;
+		}
+
 		$allowed_tabs = array( 'general', 'availability', 'google', 'meetings', 'email', 'style' );
 		if ( ! in_array( $tab, $allowed_tabs, true ) ) {
 			$tab = 'general';

@@ -2,6 +2,13 @@
 
 All notable changes to Meet With Me are documented here.
 
+## 0.3.1 — 2026-10-06
+
+First bugfix release after launch:
+
+- **Fixed one-click Google connect on fresh installs** — 0.3.0 shipped without the shared connection client ID, so every new install showed "One-click connection is not configured on this site yet" (only the dev site had it via a stored setting). The public client ID now ships in the plugin; the client secret stays on the plugins.tapps.design relay, and the `relay_client_id` setting / `mwm_google_relay_client_id` filter remain as overrides.
+- **Fixed the Help & Setup settings tab** — the tab controller whitelist omitted `help`, so clicking the tab silently fell through to the General tab. The router now hands `help` to its static view as designed.
+
 ## 0.3.0 — 2026-10-06
 
 Professionalization pass (release prep):
