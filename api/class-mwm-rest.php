@@ -314,10 +314,12 @@ class MWM_REST {
 			return new WP_REST_Response( array( 'message' => __( 'Invalid datetime format.', 'meet-with-me' ) ), 400 );
 		}
 
-		// Sanitize field answers
-		$field_answers = array();
+		// Sanitize field answers (display-for filtered: questions hidden for the
+		// chosen meeting format are skipped entirely, required or not).
+		$field_answers  = array();
+		$visible_fields = MWM_Event_Type::visible_fields( $event_type['fields'] ?? array(), $meeting_type );
 		if ( ! empty( $body['field_answers'] ) && is_array( $body['field_answers'] ) ) {
-			foreach ( $event_type['fields'] ?? array() as $field ) {
+			foreach ( $visible_fields as $field ) {
 				$fid = $field['id'];
 				if ( ! isset( $body['field_answers'][ $fid ] ) ) {
 					continue;

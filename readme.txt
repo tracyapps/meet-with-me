@@ -4,7 +4,7 @@ Tags: booking, appointments, scheduling, calendar, zoom
 Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.4.0
+Stable tag: 0.5.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -93,6 +93,16 @@ Every confirmation email contains a private manage link. Bookers can cancel or p
 Uninstalling removes all plugin options, transients, and booking data — including on every site of a multisite network.
 
 == Changelog ==
+
+= 0.5.0 =
+* Meeting type editor: changes now autosave in place (debounced, with a Saving/Saved/Error status chip in the Publish card) — no more full-page reloads after every option. The classic save stays as a fallback and now keeps you on the editor.
+* Meeting automation rebuilt: a No/Yes/Conditional segmented control (derived from your existing settings) with the provider row shown only for Yes/Conditional and routing rules only for Conditional. The whole section hides for in-person-only types and now sits below Questions, since routing uses them.
+* Questions: options can be reordered (drag or up/down buttons) and radio/checkbox questions gain a layout option (stacked, inline, columns).
+* Questions: a "display for" Online/In-person toggle pair per question (only for Let-the-booker-choose types; both on by default, highlighted boxes, always visible). The booking wizard and REST validation both honor the flags.
+* Meeting type editor layout: collapsible sections (state remembered), dashboard-style draggable cards (order remembered, drag between columns), sticky Publish card, two-column sections on wide screens, and a non-clickable live preview card (sidebar by default, movable to the main column) with All/Online/In-person filters that updates as you edit questions.
+* Per-type availability overrides: weekly hours can be customized per meeting type; the default hours show as a read-only ghost. Global date overrides and days off still apply to every type.
+* Settings rename: the Availability tab is now "Default Availability".
+* Booking wizard: switching the meeting format on the details step keeps everything typed while re-filtering questions.
 
 = 0.4.0 =
 * Booking wizard UX: a persistent "Your selection" panel now shows the event type, chosen day, and chosen time in a fixed, visually weighted spot from the moment a day is picked — all the way through the details form and the confirmation screen, so you can always double-check what you're booking before submitting.

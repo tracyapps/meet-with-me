@@ -38,7 +38,7 @@ $base_url = add_query_arg(
 
 	<!-- ===== WEEKLY SCHEDULE ===== -->
 	<div class="mwm-card mwm-availability-card">
-		<h2><?php esc_html_e( 'Your Weekly Hours', 'meet-with-me' ); ?></h2>
+		<h2><?php esc_html_e( 'Default Weekly Hours', 'meet-with-me' ); ?></h2>
 		<p class="description" style="margin-bottom:20px;">
 			<?php esc_html_e( 'Set the days and times you are generally available for meetings. All times are in your configured timezone.', 'meet-with-me' ); ?>
 			<strong><?php echo esc_html( MWM_Settings::get( 'timezone' ) ); ?></strong>
@@ -99,7 +99,7 @@ $base_url = add_query_arg(
 
 			<p class="submit">
 				<button type="submit" name="mwm_save_schedule" class="button button-primary">
-					<?php esc_html_e( 'Save Weekly Hours', 'meet-with-me' ); ?>
+					<?php esc_html_e( 'Save Default Hours', 'meet-with-me' ); ?>
 				</button>
 			</p>
 		</form>

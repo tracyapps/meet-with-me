@@ -2,6 +2,18 @@
 
 All notable changes to Meet With Me are documented here.
 
+## 0.5.0 — 2026-10-07
+
+Admin UX overhaul of the Meeting Types editor:
+
+- **Autosave** — every editor change persists via a debounced AJAX call (same nonce/capability/sanitization as the classic save, shared through `prepare_data()`); the Publish card shows a Saving… / Saved HH:MM / Error (click to retry) status chip. Classic submit remains as a fallback and now redirects back to the editor instead of the list. New types still create on the first explicit save, then autosave takes over (URL and form update in place).
+- **Automation hierarchy fixed** — the Online Meeting Automation card moved below Questions (it routes on them), hides entirely for in-person-only formats, and gained a No/Yes/Conditional segmented control derived from the stored provider/routing data (no schema change: mode maps back to `online_provider` + `online_routing_field_id`). The provider row shows for Yes/Conditional; routing field + rules only for Conditional.
+- **Question options** — reorderable (drag handle + up/down buttons per option) and radio/checkbox questions gained a `layout` setting (stacked / inline / columns) rendered by the booking wizard.
+- **Display-for toggles** — each question carries Online and In-person chip switches (highlighted when on), visible only when the format is "Let the booker choose". Flags persist in the fields JSON (`show_online` / `show_in_person`, default true), gate the wizard's details step (with answer-preserving re-render when the booker switches format), and the REST booking endpoint skips hidden questions so a hidden required question can never 400.
+- **Editor layout** — collapsible section cards (state persisted per browser), dashboard-style draggable cards (grip handle on every card, drag between the main and sidebar columns, order persisted per browser; the preview card keeps its keyboard-accessible move button), sticky Publish card, two-column sections at ≥1400px, and a live preview card rendering an inert (`pointer-events:none`) replica of the details step with All/Online/In-person filters; movable between sidebar and main column.
+- **Per-type weekly availability** — new `availability_override` JSON column (dbDelta migration) with ghost-default UI: the editor shows the global weekly schedule as a read-only ghost; switching to "Custom hours" turns a live grid on (seeded from the override or global defaults), and switching back re-ghosts while keeping unsaved custom values until save. `MWM_Availability::get_windows_for_date()` resolves type override → global weekly (global date overrides and days off always win). The settings tab was renamed to "Default Availability".
+- **Tests** — new `MWM_Type_Customization_Test` (field layout/flag round-trips, `visible_fields()` filtering, override windows per type, global date rules beating type weeklies, disabled-day overrides, hidden-required-question booking flow).
+
 ## 0.4.0 — 2026-10-06
 
 Booking wizard UX foundation (first release of the design program):

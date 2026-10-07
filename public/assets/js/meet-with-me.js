@@ -489,7 +489,7 @@
       </div>
     </div>` : ''}
 
-    ${(et.fields||[]).map(f => this._tplField(f)).join('')}
+    ${(this._visibleFields(this.s.meetingType)).map(f => this._tplField(f)).join('')}
 
     <div class="mwm-form__group">
       <label class="mwm-form__label" for="${this.uid}-notes">${this._e(t('anythingElse', 'Anything else?'))} <span class="mwm-optional">${this._e(t('optional', '(optional)'))}</span></label>
@@ -504,11 +504,62 @@
 </div>`;
         }
 
+        /**
+         * Questions shown for a given meeting format. The per-question
+         * display-for flags (show_online / show_in_person) only gate the list
+         * when the event type lets the booker choose a format; fixed-format
+         * types show every question. Unchosen ('both' + nothing picked) shows all.
+         */
+        _visibleFields(meetingType) {
+            const et = this.s.eventType;
+            const fields = et.fields || [];
+            if (et.meeting_type !== 'both' || !meetingType) {
+                return fields;
+            }
+            if (meetingType === 'online') {
+                return fields.filter(f => f.show_online !== false);
+            }
+            if (meetingType === 'in_person') {
+                return fields.filter(f => f.show_in_person !== false);
+            }
+            return fields;
+        }
+
+        /**
+         * Snapshot current custom-question inputs into state so a re-render
+         * (e.g. switching meeting format and re-filtering questions) keeps
+         * everything the booker already typed.
+         */
+        _harvestFieldAnswers() {
+            const fa = {};
+            this.el.querySelectorAll('input[name^="ff_"], textarea[name^="ff_"], select[name^="ff_"]').forEach(inp => {
+                const id = inp.name.replace(/\[\]$/, '').slice(3);
+                if (inp.type === 'checkbox') {
+                    if (inp.checked) {
+                        (fa[id] = fa[id] || []).push(inp.value);
+                    }
+                } else if (inp.type === 'radio') {
+                    if (inp.checked) {
+                        fa[id] = inp.value;
+                    }
+                } else {
+                    fa[id] = inp.value;
+                }
+            });
+            for (const f of (this.s.eventType.fields || [])) {
+                if (f.type === 'checkbox' && !fa[f.id]) {
+                    fa[f.id] = [];
+                }
+            }
+            this.s.fieldAnswers = fa;
+        }
+
         _tplField(f) {
             const fid  = `${this.uid}-f-${f.id}`;
             const req  = f.required;
             const lbl  = `<label class="mwm-form__label${req?' mwm-form__label--req':''}" for="${fid}">${this._e(f.label)}</label>`;
             const sv   = this.s.fieldAnswers[f.id] || '';
+            const optsClass = `mwm-field-opts mwm-opts--${f.layout || 'stacked'}`;
             let inp = '';
             switch (f.type) {
                 case 'textarea':
@@ -518,12 +569,13 @@
                     inp = `<select id="${fid}" name="ff_${f.id}" class="mwm-form__select" ${req?'required':''}><option value="">${this._e(t('choosePlaceholder', '— Choose —'))}</option>${f.options.map(o=>`<option value="${this._e(o)}"${sv===o?' selected':''}>${this._e(o)}</option>`).join('')}</select>`;
                     break;
                 case 'radio':
-                    inp = f.options.map(o=>`<label class="mwm-radio-label"><input type="radio" name="ff_${f.id}" value="${this._e(o)}"${sv===o?' checked':''} ${req?'required':''}> ${this._e(o)}</label>`).join('');
+                    inp = `<div class="${optsClass}" role="radiogroup" aria-label="${this._e(f.label)}">${f.options.map(o=>`<label class="mwm-radio-label"><input type="radio" name="ff_${f.id}" value="${this._e(o)}"${sv===o?' checked':''} ${req?'required':''}> ${this._e(o)}</label>`).join('')}</div>`;
                     break;
-                case 'checkbox':
+                case 'checkbox': {
                     const sva = Array.isArray(sv)?sv:[];
-                    inp = f.options.map(o=>`<label class="mwm-radio-label"><input type="checkbox" name="ff_${f.id}[]" value="${this._e(o)}"${sva.includes(o)?' checked':''}> ${this._e(o)}</label>`).join('');
+                    inp = `<div class="${optsClass}">${f.options.map(o=>`<label class="mwm-radio-label"><input type="checkbox" name="ff_${f.id}[]" value="${this._e(o)}"${sva.includes(o)?' checked':''}> ${this._e(o)}</label>`).join('')}</div>`;
                     break;
+                }
                 default: // text
                     inp = `<input type="text" id="${fid}" name="ff_${f.id}" class="mwm-form__input" placeholder="${this._e(f.placeholder)}" ${req?'required':''} value="${this._e(sv)}">`;
             }
@@ -688,9 +740,10 @@
 
         _onChange(e) {
             if (e.target.name === 'meeting_type') {
-                this.el.querySelectorAll('.mwm-mt-opt').forEach(el => {
-                    el.classList.toggle('mwm-mt-opt--sel', el.querySelector('input').value === e.target.value);
-                });
+                // Harvest typed answers into state first so the re-render that
+                // re-filters questions by format keeps everything entered.
+                this._harvestFieldAnswers();
+                this._set({ meetingType: e.target.value });
             } else if (e.target.matches('[data-a="picker-year"]')) {
                 this._pickerYearFocusPending = true;
                 this._set({ pickerYear: Number(e.target.value) || this.s.year });
@@ -719,7 +772,7 @@
             }
 
             const fa = {};
-            for (const f of (et.fields || [])) {
+            for (const f of this._visibleFields(this.s.meetingType)) {
                 if (f.type === 'checkbox') {
                     const vals = [...form.querySelectorAll(`[name="ff_${f.id}[]"]:checked`)].map(el => el.value);
                     if (f.required && !vals.length) return this._formErr(form, fmt(t('pleaseAnswer', 'Please answer: %s'), f.label), form.querySelector(`[name="ff_${f.id}[]"]`));

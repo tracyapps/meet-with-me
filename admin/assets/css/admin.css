@@ -45,12 +45,17 @@
 /* ---- Field rows ---- */
 
 .mwm-field-row { margin-bottom: 16px; }
-.mwm-field-row label:first-child {
+.mwm-field-row + label:first-child {
     display: block;
     font-weight: 600;
     margin-bottom: 6px;
 }
 .mwm-field-row .description { margin-top: 4px; }
+
+/* ----- Automation section field rows ---- */
+#mwm-automation-mode-row .mwm-segmented {
+    margin-left: 1em;
+}
 
 /* Toggle label inside a field row should not inherit the bold column label style. */
 .mwm-field-row label.mwm-toggle-label { display: flex; font-weight: 400; }
@@ -64,7 +69,7 @@
 .mwm-field-row--inline label:first-child { margin-bottom: 4px; }
 
 /* ---- Radio group ---- */
-
+.mwm-radio-group-label {display: inline-block; margin-bottom: 7px; }
 .mwm-radio-group { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
 .mwm-radio-label { display: flex; align-items: center; gap: 8px; font-weight: 400; cursor: pointer; }
 
@@ -483,4 +488,291 @@
 }
 .mwm-gcal-advanced[open] > summary {
 	margin-bottom: 4px;
+}
+
+/* ==========================================================================
+   Meeting Type editor: collapsibles, automation, availability, autosave,
+   display-for chips, option reordering, live preview
+   ========================================================================== */
+
+/* ---- Collapsible cards ---- */
+
+.mwm-collapsible .mwm-card__title {
+    margin: 0 0 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #f0f0f1;
+}
+.mwm-card-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    font-size: 1em;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+}
+.mwm-card-toggle__arrow::before {
+    content: "\25BE";
+    color: #787c82;
+    transition: transform 0.15s ease;
+}
+.mwm-collapsible.is-collapsed { padding-bottom: 14px; }
+.mwm-collapsible.is-collapsed .mwm-card__body { display: none; }
+.mwm-collapsible.is-collapsed .mwm-card__title { margin-bottom: 0; border-bottom: 0; }
+.mwm-collapsible.is-collapsed .mwm-card-toggle__arrow::before { transform: rotate(-90deg); }
+
+/* ---- Sticky publish card ---- */
+
+.mwm-card--sticky {
+    position: sticky;
+    top: 46px;
+}
+
+/* ---- Autosave status chip ---- */
+
+.mwm-autosave-status {
+    display: block;
+    min-height: 22px;
+    margin-bottom: 10px;
+    font-size: 12px;
+    color: #787c82;
+}
+.mwm-autosave-status.is-saving { color: #787c82; }
+.mwm-autosave-status.is-saved { color: #007017; }
+.mwm-autosave-status.is-error {
+    color: #b32d2e;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+/* ---- Segmented control (automation mode) ---- */
+
+.mwm-segmented {
+    display: inline-flex;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    overflow: hidden;
+}
+.mwm-segmented__item {
+    position: relative;
+    display: inline-flex;
+}
+.mwm-segmented__item input {
+    position: absolute;
+    opacity: 0;
+    inset: 0;
+    margin: 0;
+    cursor: pointer;
+}
+.mwm-segmented__item span {
+    display: inline-block;
+    padding: 7px 18px;
+    background: #fff;
+    color: #2c3338;
+    border-right: 1px solid #c3c4c7;
+    font-weight: 500;
+}
+.mwm-segmented__item:last-child span { border-right: 0; }
+.mwm-segmented__item input:checked + span,
+.mwm-segmented__item input:focus-visible + span {
+    background: var(--wp-admin-theme-color, #3858e9);
+    color: #fff;
+}
+.mwm-segmented__item input:focus-visible + span {
+    outline: 2px solid var(--wp-admin-theme-color, #3858e9);
+    outline-offset: 2px;
+}
+
+/* ---- Availability: ghost grid + mode ---- */
+
+.mwm-availability-mode { margin-bottom: 12px; }
+.mwm-availability-mode .mwm-radio-label { margin-right: 18px; }
+.mwm-schedule-grid--ghost {
+    background: #f6f7f7;
+    border: 1px dashed #c3c4c7;
+    border-radius: 4px;
+    padding: 12px 16px;
+    opacity: 0.75;
+}
+.mwm-schedule-grid--ghost .mwm-schedule-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 5px 0;
+    border-bottom: 1px solid #e7e8ea;
+}
+.mwm-schedule-grid--ghost .mwm-schedule-row:last-of-type { border-bottom: 0; }
+.mwm-schedule-grid--ghost .mwm-schedule-row.is-enabled .mwm-schedule-ghost-times { font-weight: 500; }
+.mwm-schedule-grid--ghost .description { margin-top: 10px; }
+
+/* ---- Display-for chips (question rows) ---- */
+
+.mwm-fl-display-for {
+    display: inline-flex;
+    gap: 6px;
+    margin-left: auto;
+}
+.mwm-fields-list.mwm-hide-display-for .mwm-fl-display-for { display: none; }
+.mwm-display-chip {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    padding: 2px 10px;
+    cursor: pointer;
+    background: #fff;
+    user-select: none;
+}
+.mwm-display-chip input {
+    margin: 0 6px 0 0;
+    accent-color: var(--wp-admin-theme-color, #3858e9);
+}
+.mwm-display-chip.is-on {
+    background: #eef2ff;
+    border-color: var(--wp-admin-theme-color, #3858e9);
+    color: var(--wp-admin-theme-color, #3858e9);
+    font-weight: 600;
+}
+.mwm-display-chip:not(.is-on) { opacity: 0.7; }
+
+/* ---- Options: reorder handle + layout select ---- */
+
+.mwm-options-config { margin-bottom: 8px; }
+.mwm-option-handle {
+    cursor: grab;
+    color: #787c82;
+    padding-right: 2px;
+}
+.mwm-option-row .button-link { color: #787c82; }
+.mwm-option-row .button-link:hover { color: #2271b1; }
+
+/* ---- Live preview ---- */
+
+.mwm-preview-card h2 {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.mwm-preview-move { color: #787c82; }
+.mwm-preview-filters {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 12px;
+}
+.mwm-preview-filter {
+    border: 1px solid #c3c4c7;
+    background: #fff;
+    border-radius: 3px;
+    padding: 2px 10px;
+    cursor: pointer;
+}
+.mwm-preview-filter.is-active {
+    background: var(--wp-admin-theme-color, #3858e9);
+    border-color: var(--wp-admin-theme-color, #3858e9);
+    color: #fff;
+}
+.mwm-live-preview {
+    pointer-events: none;
+    user-select: none;
+    border: 1px solid #e2e4e7;
+    border-radius: 4px;
+    padding: 12px;
+    background: #fff;
+}
+.mwm-live-preview .mwm-preview-wizard {
+    max-width: none;
+    font-size: 0.9em;
+}
+.mwm-live-preview .mwm-preview-wizard .mwm-summary { margin-bottom: 12px; }
+.mwm-preview-input {
+    display: block;
+    width: 100%;
+    height: 30px;
+    border: 1px solid #c3c4c7;
+    border-radius: 3px;
+    background: #fff;
+}
+.mwm-preview-input--area { height: 60px; }
+.mwm-preview-select {
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    color: #787c82;
+    font-size: 0.9em;
+}
+.mwm-preview-opts { display: flex; flex-direction: column; gap: 6px; }
+.mwm-preview-opts.mwm-opts--inline { flex-direction: row; flex-wrap: wrap; gap: 12px; }
+.mwm-preview-opts.mwm-opts--columns {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+}
+.mwm-preview-opts.mwm-opts--columns .mwm-preview-opt { flex: 0 0 45%; }
+.mwm-preview-opt {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.9em;
+}
+.mwm-preview-opt__box {
+    width: 14px;
+    height: 14px;
+    border: 1px solid #787c82;
+    border-radius: 3px;
+    background: #fff;
+}
+.mwm-preview-empty {
+    color: #787c82;
+    font-style: italic;
+    margin: 8px 0;
+}
+
+/* ---- Wide screens: two columns of editor sections ---- */
+
+@media ( min-width: 1400px ) {
+    .mwm-edit-main {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 20px;
+        align-items: start;
+    }
+    .mwm-edit-main .mwm-card { margin-bottom: 0; }
+    .mwm-edit-main .mwm-card:only-child,
+    .mwm-edit-main > .mwm-preview-card { grid-column: 1 / -1; }
+    .mwm-edit-main .mwm-fields-list .mwm-option-value { max-width: 70%; }
+}
+
+/* ---- Draggable editor cards (dashboard-style) ---- */
+
+.mwm-card-drag-handle {
+    cursor: grab;
+    color: #a7aaad;
+    padding-right: 8px;
+    font-size: 1.05em;
+    line-height: 1;
+}
+.mwm-card-drag-handle:hover { color: #50575e; }
+.mwm-collapsible .mwm-card__title {
+    display: flex;
+    align-items: center;
+}
+.mwm-collapsible .mwm-card-toggle { flex: 1; }
+.mwm-preview-card h2 { display: flex; align-items: center; gap: 8px; }
+.mwm-preview-card h2 .mwm-preview-move { margin-left: auto; }
+.mwm-card--sticky h2,
+.mwm-card--shortcodes h2 { display: flex; align-items: center; }
+
+.mwm-card-sort-placeholder {
+    border: 1px dashed #c3c4c7;
+    background: #f6f7f7;
+    border-radius: 4px;
+    margin-bottom: 20px;
+}
+.mwm-card.ui-sortable-helper {
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+    opacity: 0.85;
 }

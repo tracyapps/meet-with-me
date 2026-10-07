@@ -54,7 +54,7 @@ $style_url   = add_query_arg(
 				<?php
 				printf(
 					/* translators: %s = link to the General settings tab */
-					esc_html__( 'Set your name, notification email, and timezone under %s, then tune your weekly hours under Availability.', 'meet-with-me' ),
+					esc_html__( 'Set your name, notification email, and timezone under %s, then tune your weekly hours under Default Availability.', 'meet-with-me' ),
 					'<a href="' . esc_url( $general_url ) . '">' . esc_html__( 'General', 'meet-with-me' ) . '</a>'
 				);
 				?>

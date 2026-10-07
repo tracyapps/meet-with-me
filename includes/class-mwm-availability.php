@@ -70,8 +70,8 @@ class MWM_Availability {
 			return array();
 		}
 
-		// Get availability windows for this date
-		$windows = self::get_windows_for_date( $date, $admin_tz );
+		// Get availability windows for this date (per-type override first)
+		$windows = self::get_windows_for_date( $date, $admin_tz, $event_type['availability_override'] ?? null );
 		if ( empty( $windows ) ) {
 			return array();
 		}
@@ -223,7 +223,7 @@ class MWM_Availability {
 			return false;
 		}
 
-		$windows = self::get_windows_for_date( $date, $admin_tz );
+		$windows = self::get_windows_for_date( $date, $admin_tz, $event_type['availability_override'] ?? null );
 		if ( empty( $windows ) ) {
 			return false;
 		}
@@ -293,9 +293,17 @@ class MWM_Availability {
 	 * Returns override rules if any exist; otherwise falls back to weekly rules.
 	 * Returns [] if the day is marked unavailable or has no rules.
 	 *
+	 * Resolution order:
+	 *   1. Global date-specific overrides (holidays etc. apply to every type).
+	 *   2. The event type's per-type weekly override, when one is passed.
+	 *   3. Global weekly rules.
+	 *
+	 * @param string            $date          Date in 'Y-m-d' format (admin timezone).
+	 * @param DateTimeZone|null $admin_tz Admin timezone.
+	 * @param array|null        $type_override Parsed availability_override from the event type.
 	 * @return array[]  [['start' => 'HH:MM', 'end' => 'HH:MM'], ...]
 	 */
-	public static function get_windows_for_date( string $date, ?DateTimeZone $admin_tz = null ): array {
+	public static function get_windows_for_date( string $date, ?DateTimeZone $admin_tz = null, ?array $type_override = null ): array {
 		global $wpdb;
 		$admin_tz = $admin_tz ?? self::admin_tz();
 
@@ -329,10 +337,24 @@ class MWM_Availability {
 			);
 		}
 
-		// Fall back to weekly rules
-		// PHP N format: 1=Mon...7=Sun. Our DB: 0=Sun, 1=Mon...6=Sat
+		// PHP N format: 1=Mon...7=Sun. Our storage: 0=Sun, 1=Mon...6=Sat
 		$day_of_week = (int) ( new DateTimeImmutable( $date, $admin_tz ) )->format( 'N' ) % 7;
 
+		// Per-type weekly override replaces the global weekly schedule entirely.
+		if ( is_array( $type_override ) && isset( $type_override['weekly'] ) && is_array( $type_override['weekly'] ) ) {
+			$day = $type_override['weekly'][ $day_of_week ] ?? null;
+			if ( ! is_array( $day ) || empty( $day['enabled'] ) ) {
+				return array();
+			}
+			return array(
+				array(
+					'start' => substr( (string) $day['start'], 0, 5 ),
+					'end'   => substr( (string) $day['end'], 0, 5 ),
+				),
+			);
+		}
+
+		// Fall back to weekly rules
 		$rules = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT * FROM {$wpdb->prefix}mwm_availability_rules

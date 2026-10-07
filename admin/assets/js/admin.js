@@ -131,15 +131,19 @@
     });
 
     // =========================================================================
-    // Custom Fields Builder
+    // Meeting Type editor (fields builder, conditional sections, autosave,
+    // availability override, live preview)
     // =========================================================================
 
     const $fieldsList  = $('#mwm-fields-list');
     const $fieldsJson  = $('#mwm-fields-json');
     const $addFieldBtn = $('#mwm-add-field');
+    const $etForm      = $('#mwm-event-type-form');
     const tpl          = document.getElementById('mwm-field-row-tpl')?.innerHTML || '';
 
-    if ($fieldsList.length && tpl) {
+    if ($etForm.length) {
+
+        let previewFormat = 'all';
 
         // Load existing fields from JSON hidden input
         let existingFields = [];
@@ -150,15 +154,351 @@
         }
 
         existingFields.forEach(field => addFieldRow(field));
+        initOptionsSortables();
         renderOnlineProviderRules();
+        updateConditionalSections();
+        updateDisplayForVisibility();
+        renderPreview();
 
-        // Add new field
+        // ---- Change tracking: preview refreshes immediately, autosave debounces.
+        let autosaveTimer  = null;
+        let autosaveBusy   = false;
+        let autosaveDirty  = false;
+
+        function scheduleChanged() {
+            renderPreview();
+            if ($etForm.data('autosave') !== 'on') return;
+            autosaveDirty = true;
+            if (autosaveTimer) clearTimeout(autosaveTimer);
+            autosaveTimer = setTimeout(runAutosave, 1500);
+        }
+
+        $etForm.on('input change', 'input, select, textarea', function () {
+            if ($(this).is('[data-mwm-skip-autosave]')) return;
+            scheduleChanged();
+        });
+
+        // Drag-reorder (jQuery UI sortable) fires no input/change events.
+        $etForm.on('mwm:changed', scheduleChanged);
+
+        function setAutosaveStatus(state, note) {
+            const $chip = $('#mwm-autosave-status');
+            if (!$chip.length) return;
+            $chip.removeClass('is-saving is-saved is-error');
+            if (state === 'saving') {
+                $chip.addClass('is-saving').text(t('autosaving', 'Saving…'));
+            } else if (state === 'saved') {
+                $chip.addClass('is-saved').text(fmt(t('savedAt', 'Saved %s'), note || ''));
+            } else if (state === 'error') {
+                $chip.addClass('is-error').text(t('autosaveError', 'Save failed — click to retry'));
+            } else {
+                $chip.text('');
+            }
+        }
+
+        function runAutosave() {
+            if (autosaveBusy || !autosaveDirty) return;
+            autosaveBusy  = true;
+            autosaveDirty = false;
+            serializeEditorState();
+            setAutosaveStatus('saving');
+
+            const data = $etForm.serializeArray();
+            data.push({ name: 'action', value: 'mwm_autosave_event_type' });
+            data.push({ name: 'nonce', value: ADMIN.nonce });
+
+            $.post(ADMIN.ajaxUrl, $.param(data)).done(function (res) {
+                if (res && res.success) {
+                    setAutosaveStatus('saved', res.data && res.data.savedAt);
+                    if (res.data && res.data.isNew && res.data.id) {
+                        // First save of a brand-new type: switch the form into
+                        // edit mode so subsequent changes autosave in place.
+                        $('#mwm-event-type-id').val(res.data.id);
+                        $etForm.data('autosave', 'on');
+                        $etForm.find('button[name="mwm_save_event_type"]').text(t('saveChanges', 'Save Changes'));
+                        const url = new URL(window.location.href);
+                        url.searchParams.set('action', 'edit');
+                        url.searchParams.set('id', res.data.id);
+                        window.history.replaceState({}, '', url.toString());
+                    }
+                } else {
+                    setAutosaveStatus('error');
+                    autosaveDirty = true;
+                }
+            }).fail(function () {
+                setAutosaveStatus('error');
+                autosaveDirty = true;
+            }).always(function () {
+                autosaveBusy = false;
+                if (autosaveDirty) {
+                    autosaveTimer = setTimeout(runAutosave, 1500);
+                }
+            });
+        }
+
+        $('#mwm-autosave-status').on('click', function () {
+            if ($(this).hasClass('is-error')) {
+                autosaveDirty = true;
+                runAutosave();
+            }
+        });
+
+        // Serialize everything the server needs before submit (and autosave).
+        function serializeEditorState() {
+            $fieldsJson.val(JSON.stringify(serializeFields()));
+            serializeAvailability();
+
+            // Normalize automation fields to the selected mode so the stored
+            // data always matches the UI (mode is derived on the server side).
+            const mode = $etForm.find('input[name="automation_mode"]:checked').val() || 'none';
+            const $provider = $('#mwm-online-provider');
+            const $routing  = $('#mwm-online-routing-field');
+            if (mode === 'none' && $provider.length) {
+                $provider.val('');
+            }
+            if (mode !== 'conditional' && $routing.length) {
+                $routing.val('');
+            }
+        }
+
+        // Serialize on classic submit too.
+        $etForm.on('submit', serializeEditorState);
+
+        // ---- Collapsible cards -------------------------------------------
+        const COLLAPSED_KEY = 'mwmCollapsedSections';
+        let collapsed = [];
+        try {
+            collapsed = JSON.parse(window.localStorage.getItem(COLLAPSED_KEY) || '[]');
+        } catch (e) {
+            collapsed = [];
+        }
+
+        function applyCollapsed() {
+            $('.mwm-collapsible').each(function () {
+                const key = $(this).data('mwm-section');
+                const isCollapsed = collapsed.includes(key);
+                $(this).toggleClass('is-collapsed', isCollapsed);
+                $(this).find('.mwm-card-toggle').attr('aria-expanded', isCollapsed ? 'false' : 'true');
+            });
+        }
+        applyCollapsed();
+
+        $(document).on('click', '.mwm-card-toggle', function () {
+            const $card = $(this).closest('.mwm-collapsible');
+            const key   = $card.data('mwm-section');
+            const willCollapse = !$card.hasClass('is-collapsed');
+            if (willCollapse) {
+                collapsed.push(key);
+            } else {
+                collapsed = collapsed.filter(k => k !== key);
+            }
+            try {
+                window.localStorage.setItem(COLLAPSED_KEY, JSON.stringify(collapsed));
+            } catch (e) { /* private mode — sections just won't persist */ }
+            applyCollapsed();
+        });
+
+        // ---- Conditional sections: automation + display-for ----------------
+        function updateConditionalSections() {
+            const format = $etForm.find('input[name="meeting_type"]:checked').val() || 'both';
+            const $automationCard = $('[data-mwm-section="automation"]');
+            const $modeRow   = $('#mwm-automation-mode-row');
+            const hasModeRow = $modeRow.length > 0;
+
+            // Automation only applies to online-capable formats.
+            $automationCard.toggle(format !== 'in_person');
+
+            if (hasModeRow) {
+                const mode = $etForm.find('input[name="automation_mode"]:checked').val() || 'none';
+                $('#mwm-automation-provider-row').toggle(mode !== 'none');
+                $('#mwm-automation-routing-row').toggle(mode === 'conditional');
+                $('#mwm-automation-rules-row').toggle(mode === 'conditional');
+            }
+        }
+
+        function updateDisplayForVisibility() {
+            const format = $etForm.find('input[name="meeting_type"]:checked').val() || 'both';
+            $('#mwm-fields-list').toggleClass('mwm-hide-display-for', format !== 'both');
+        }
+
+        $etForm.on('change', 'input[name="meeting_type"], input[name="automation_mode"]', function () {
+            updateConditionalSections();
+            updateDisplayForVisibility();
+        });
+
+        // Display-for chips: highlighted box when on, plain outline when off.
+        $fieldsList.on('change', '.mwm-fl-show-online, .mwm-fl-show-in-person', function () {
+            syncDisplayChipRow($(this).closest('.mwm-display-chip'));
+        });
+
+        // ---- Per-type availability: ghost ⇄ custom -------------------------
+        function serializeAvailability() {
+            const mode = $etForm.find('input[name="availability_mode"]:checked').val() || 'default';
+            const $json = $('#mwm-availability-json');
+            if (mode !== 'custom') {
+                $json.val('');
+                return;
+            }
+            const weekly = {};
+            $('#mwm-availability-custom .mwm-schedule-row').each(function () {
+                const $row = $(this);
+                const enabled = $row.find('.mwm-day-toggle').is(':checked');
+                weekly[$row.data('dow')] = {
+                    enabled: enabled,
+                    start: $row.find('.mwm-time-input').eq(0).val() || '09:00',
+                    end: $row.find('.mwm-time-input').eq(1).val() || '17:00',
+                };
+            });
+            $json.val(JSON.stringify({ weekly: weekly }));
+        }
+
+        $etForm.on('change', 'input[name="availability_mode"]', function () {
+            const custom = $(this).val() === 'custom';
+            $('#mwm-availability-ghost').toggle(!custom);
+            $('#mwm-availability-custom').toggle(custom);
+        });
+
+        // ---- Draggable cards (dashboard-style), persisted per browser --------
+        const CARD_ORDER_KEY = 'mwmEditorCardOrder';
+        const $editMain    = $('.mwm-edit-main');
+        const $editSidebar = $('.mwm-edit-sidebar');
+
+        function cardKey($card) {
+            return $card.data('mwm-section') || $card.attr('id') || '';
+        }
+
+        function saveCardOrder() {
+            const order = {
+                main: $editMain.children('.mwm-card').map((i, el) => cardKey($(el))).get(),
+                sidebar: $editSidebar.children('.mwm-card').map((i, el) => cardKey($(el))).get(),
+            };
+            try {
+                window.localStorage.setItem(CARD_ORDER_KEY, JSON.stringify(order));
+            } catch (e) { /* non-persistent order is fine */ }
+        }
+
+        function restoreCardOrder() {
+            let order = null;
+            try {
+                order = JSON.parse(window.localStorage.getItem(CARD_ORDER_KEY) || 'null');
+            } catch (e) {
+                order = null;
+            }
+            if (!order) return;
+
+            const place = function ($column, keys) {
+                keys.forEach(key => {
+                    if (!key) return;
+                    const $card = $column.children('.mwm-card').filter(function () {
+                        return cardKey($(this)) === key;
+                    });
+                    if ($card.length) {
+                        $column.append($card);
+                    }
+                });
+            };
+            place($editMain, order.main || []);
+            place($editSidebar, order.sidebar || []);
+        }
+
+        function movePreviewCard(toMain) {
+            const $card = $('#mwm-preview-card');
+            if (!$card.length) return;
+            (toMain ? $editMain : $editSidebar).append($card);
+            saveCardOrder();
+        }
+
+        restoreCardOrder();
+
+        if ($.fn.sortable && $editMain.length && $editSidebar.length) {
+            const sortableOpts = {
+                items: '> .mwm-card',
+                handle: '.mwm-card-drag-handle',
+                connectWith: '.mwm-edit-layout .mwm-edit-main, .mwm-edit-layout .mwm-edit-sidebar',
+                placeholder: 'mwm-card-sort-placeholder',
+                forcePlaceholderSize: true,
+                opacity: 0.75,
+                tolerance: 'pointer',
+                stop: saveCardOrder,
+            };
+            $editMain.sortable(sortableOpts);
+            $editSidebar.sortable(sortableOpts);
+        }
+
+        // Keyboard-accessible stand-in for dragging the preview card.
+        $('#mwm-preview-move').on('click', function () {
+            const inSidebar = $('#mwm-preview-card').closest('.mwm-edit-sidebar').length > 0;
+            movePreviewCard(inSidebar);
+        });
+
+        $(document).on('click', '.mwm-preview-filter', function () {
+            $('.mwm-preview-filter').removeClass('is-active');
+            $(this).addClass('is-active');
+            previewFormat = $(this).data('preview-format');
+            renderPreview();
+        });
+
+        // ---- Live preview (inert replica of the details step) --------------
+        function renderPreview() {
+            const $preview = $('#mwm-live-preview');
+            if (!$preview.length) return;
+
+            const name = $('#mwm-name').val() || t('previewUntitled', 'Untitled meeting type');
+            const duration = $('#mwm-duration').val() === '0'
+                ? ($('#mwm-duration-custom').val() || '?') + ' ' + t('minShort', 'min')
+                : $('#mwm-duration option:selected').text() || '';
+
+            let questions = serializeFields();
+            if (previewFormat === 'online') {
+                questions = questions.filter(f => f.show_online !== false);
+            } else if (previewFormat === 'in_person') {
+                questions = questions.filter(f => f.show_in_person !== false);
+            }
+
+            const questionsHtml = questions.length
+                ? questions.map(f => previewQuestionHtml(f)).join('')
+                : `<p class="mwm-preview-empty">${mwmEscHtml(t('previewNoQuestions', 'No questions yet — add one to see it here.'))}</p>`;
+
+            $preview.html(`
+<div class="mwm-booking-wizard mwm-preview-wizard" aria-hidden="true">
+  <div class="mwm-summary">
+    <div class="mwm-summary__type">${mwmEscHtml(name)} <span class="mwm-summary__meta">${mwmEscHtml(duration)}</span></div>
+  </div>
+  <div class="mwm-step mwm-step--details">
+    <h2 class="mwm-step__title">${mwmEscHtml(t('stepDetails', 'Your details'))}</h2>
+    <div class="mwm-form">
+      <div class="mwm-form__group"><span class="mwm-form__label">${mwmEscHtml(t('name', 'Name'))} <span aria-hidden="true">*</span></span><div class="mwm-preview-input"></div></div>
+      <div class="mwm-form__group"><span class="mwm-form__label">${mwmEscHtml(t('email', 'Email'))} <span aria-hidden="true">*</span></span><div class="mwm-preview-input"></div></div>
+      ${questionsHtml}
+    </div>
+  </div>
+</div>`);
+        }
+
+        function previewQuestionHtml(f) {
+            const req = f.required ? ' <span aria-hidden="true">*</span>' : '';
+            let control = '<div class="mwm-preview-input"></div>';
+            const layoutClass = 'mwm-opts--' + (f.layout || 'stacked');
+
+            if (f.type === 'textarea') {
+                control = '<div class="mwm-preview-input mwm-preview-input--area"></div>';
+            } else if (f.type === 'select') {
+                control = `<div class="mwm-preview-input mwm-preview-select">${mwmEscHtml(f.options[0] || '…')}</div>`;
+            } else if (f.type === 'radio' || f.type === 'checkbox') {
+                control = `<div class="mwm-preview-opts ${layoutClass}">` + f.options.map(o =>
+                    `<span class="mwm-preview-opt"><span class="mwm-preview-opt__box" aria-hidden="true"></span>${mwmEscHtml(o)}</span>`
+                ).join('') + '</div>';
+            }
+
+            return `<div class="mwm-form__group"><span class="mwm-form__label">${mwmEscHtml(f.label || '…')}${req}</span>${control}</div>`;
+        }
+
+        // ---- Fields builder events -----------------------------------------
         $addFieldBtn.on('click', function () {
             addFieldRow(null);
             renderOnlineProviderRules();
         });
 
-        // Remove field
         $fieldsList.on('click', '.mwm-fl-remove', function () {
             $(this).closest('.mwm-field-row-item').remove();
             renderOnlineProviderRules();
@@ -206,13 +546,27 @@
             renderOnlineProviderRules();
         });
 
-        $fieldsList.on('input', '.mwm-fl-label, .mwm-option-value', function () {
-            renderOnlineProviderRules();
+        // Option reordering (up/down)
+        $fieldsList.on('click', '.mwm-option-up', function () {
+            const $row  = $(this).closest('.mwm-option-row');
+            const $prev = $row.prev('.mwm-option-row');
+            if ($prev.length) {
+                $row.insertBefore($prev);
+                announce(t('optionMoveUp', 'Move option up'));
+            }
         });
 
-        // Serialize fields before form submit
-        $('#mwm-event-type-form').on('submit', function () {
-            $fieldsJson.val(JSON.stringify(serializeFields()));
+        $fieldsList.on('click', '.mwm-option-down', function () {
+            const $row  = $(this).closest('.mwm-option-row');
+            const $next = $row.next('.mwm-option-row');
+            if ($next.length) {
+                $row.insertAfter($next);
+                announce(t('optionMoveDown', 'Move option down'));
+            }
+        });
+
+        $fieldsList.on('input', '.mwm-fl-label, .mwm-option-value', function () {
+            renderOnlineProviderRules();
         });
 
         // jQuery UI Sortable for drag reordering (dep enqueued in MWM_Admin)
@@ -222,6 +576,9 @@
                 axis: 'y',
                 tolerance: 'pointer',
                 placeholder: 'mwm-sort-placeholder',
+                update: function () {
+                    $etForm.trigger('mwm:changed');
+                },
             });
         }
     }
@@ -236,16 +593,51 @@
             $row.find('.mwm-fl-type').val(field.type || 'text');
             $row.find('.mwm-fl-required').prop('checked', !!field.required);
             $row.find('.mwm-fl-placeholder').val(field.placeholder || '');
+            $row.find('.mwm-fl-layout').val(field.layout || 'stacked');
+            $row.find('.mwm-fl-show-online').prop('checked', field.show_online !== false);
+            $row.find('.mwm-fl-show-in-person').prop('checked', field.show_in_person !== false);
 
             if (field.options && field.options.length) {
                 field.options.forEach(opt => {
                     $row.find('.mwm-options-list').append(makeOptionRow(opt));
                 });
             }
+        } else {
+            $row.find('.mwm-fl-show-online').prop('checked', true);
+            $row.find('.mwm-fl-show-in-person').prop('checked', true);
         }
+
+        $row.find('.mwm-display-chip').each(function () {
+            syncDisplayChipRow($(this));
+        });
 
         $fieldsList.append($row);
         updateFieldRowUI($row);
+        initOptionSortable($row.find('.mwm-options-list'));
+    }
+
+    // Chip highlight sync usable before the editor block binds events.
+    function syncDisplayChipRow($chip) {
+        $chip.toggleClass('is-on', $chip.find('input').is(':checked'));
+    }
+
+    function initOptionSortable($list) {
+        if ($.fn.sortable && $list.length) {
+            $list.sortable({
+                axis: 'y',
+                tolerance: 'pointer',
+                placeholder: 'mwm-sort-placeholder',
+                update: function () {
+                    $('#mwm-event-type-form').trigger('mwm:changed');
+                },
+            });
+        }
+    }
+
+    function initOptionsSortables() {
+        $('.mwm-options-list').each(function () {
+            initOptionSortable($(this));
+        });
     }
 
     function updateFieldRowUI($row) {
@@ -256,6 +648,9 @@
         $row.find('.mwm-field-row-options').toggle(hasOptions);
         $row.find('.mwm-field-row-placeholder').toggle(hasPlaceholder);
 
+        // The layout select only makes sense for radio/checkbox presentation.
+        $row.find('.mwm-fl-layout').closest('label').toggle(type === 'radio' || type === 'checkbox');
+
         // Ensure at least one option row for options types
         if (hasOptions && $row.find('.mwm-option-row').length === 0) {
             $row.find('.mwm-options-list').append(makeOptionRow(''));
@@ -264,10 +659,13 @@
 
     function makeOptionRow(value) {
         return $('<div class="mwm-option-row">')
+            .append($('<span class="mwm-option-handle" aria-hidden="true" title="' + mwmEscHtml(t('dragReorder', 'Drag to reorder')) + '">&#x2807;</span>'))
             .append($('<input type="text" class="mwm-option-value regular-text">')
                 .val(value)
                 .attr('placeholder', t('optionText', 'Option text'))
                 .attr('aria-label', t('optionText', 'Option text')))
+            .append($('<button type="button" class="mwm-option-up button-link" aria-label="' + mwmEscHtml(t('optionMoveUp', 'Move option up')) + '">&#9650;</button>'))
+            .append($('<button type="button" class="mwm-option-down button-link" aria-label="' + mwmEscHtml(t('optionMoveDown', 'Move option down')) + '">&#9660;</button>'))
             .append($('<button type="button" class="mwm-option-remove button-link-delete">&#x2715;</button>')
                 .attr('aria-label', t('removeOption', 'Remove option'))
                 .attr('title', t('removeOption', 'Remove option')));
@@ -289,13 +687,16 @@
             }
 
             fields.push({
-                id:          $row.data('field-id'),
-                label:       $row.find('.mwm-fl-label').val().trim(),
-                type:        type,
-                placeholder: $row.find('.mwm-fl-placeholder').val().trim(),
-                required:    $row.find('.mwm-fl-required').is(':checked'),
-                options:     options,
-                order:       index,
+                id:             $row.data('field-id'),
+                label:          $row.find('.mwm-fl-label').val().trim(),
+                type:           type,
+                placeholder:    $row.find('.mwm-fl-placeholder').val().trim(),
+                required:       $row.find('.mwm-fl-required').is(':checked'),
+                options:        options,
+                layout:         $row.find('.mwm-fl-layout').val() || 'stacked',
+                show_online:    $row.find('.mwm-fl-show-online').length ? $row.find('.mwm-fl-show-online').is(':checked') : true,
+                show_in_person: $row.find('.mwm-fl-show-in-person').length ? $row.find('.mwm-fl-show-in-person').is(':checked') : true,
+                order:          index,
             });
         });
         return fields;

@@ -2,23 +2,23 @@
 # This file is distributed under the GPL-2.0-or-later.
 msgid ""
 msgstr ""
-"Project-Id-Version: Meet With Me 0.3.2\n"
+"Project-Id-Version: Meet With Me 0.5.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/meet-with-me\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-07T04:33:14+00:00\n"
+"POT-Creation-Date: 2026-10-07T20:23:19+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: meet-with-me\n"
 
 #. Plugin Name of the plugin
 #: meet-with-me.php
-#: admin/class-mwm-admin.php:23
-#: admin/class-mwm-admin.php:24
-#: admin/class-mwm-admin.php:303
+#: admin/class-mwm-admin.php:27
+#: admin/class-mwm-admin.php:28
+#: admin/class-mwm-admin.php:329
 #: includes/class-mwm-blocks.php:79
 msgid "Meet With Me"
 msgstr ""
@@ -45,7 +45,8 @@ msgstr ""
 #: admin/class-mwm-admin-bookings.php:57
 #: admin/class-mwm-admin-bookings.php:86
 #: admin/class-mwm-admin-event-types.php:69
-#: admin/class-mwm-admin-event-types.php:131
+#: admin/class-mwm-admin-event-types.php:102
+#: admin/class-mwm-admin-event-types.php:210
 #: admin/class-mwm-admin-general.php:13
 #: admin/class-mwm-admin-general.php:25
 #: admin/class-mwm-admin-google.php:13
@@ -54,7 +55,7 @@ msgstr ""
 #: admin/class-mwm-admin-meetings.php:25
 #: admin/class-mwm-admin-style.php:13
 #: admin/class-mwm-admin-style.php:25
-#: admin/class-mwm-admin.php:369
+#: admin/class-mwm-admin.php:395
 msgid "Permission denied."
 msgstr ""
 
@@ -204,27 +205,37 @@ msgstr ""
 msgid "2 hours"
 msgstr ""
 
-#: admin/class-mwm-admin-event-types.php:76
-msgid "Meeting type name is required."
-msgstr ""
-
-#: admin/class-mwm-admin-event-types.php:85
-msgid "That slug is already in use. Please choose a different one."
-msgstr ""
-
-#: admin/class-mwm-admin-event-types.php:115
+#: admin/class-mwm-admin-event-types.php:83
 msgid "Meeting type updated."
 msgstr ""
 
-#: admin/class-mwm-admin-event-types.php:119
+#: admin/class-mwm-admin-event-types.php:87
 msgid "Meeting type created."
 msgstr ""
 
-#: admin/class-mwm-admin-event-types.php:121
+#: admin/class-mwm-admin-event-types.php:89
+#: admin/class-mwm-admin-event-types.php:113
+#: admin/class-mwm-admin-event-types.php:127
 msgid "Could not save meeting type. Please try again."
 msgstr ""
 
-#: admin/class-mwm-admin-event-types.php:135
+#: admin/class-mwm-admin-event-types.php:119
+msgid "Saved"
+msgstr ""
+
+#: admin/class-mwm-admin-event-types.php:134
+msgid "Created"
+msgstr ""
+
+#: admin/class-mwm-admin-event-types.php:158
+msgid "Meeting type name is required."
+msgstr ""
+
+#: admin/class-mwm-admin-event-types.php:166
+msgid "That slug is already in use. Please choose a different one."
+msgstr ""
+
+#: admin/class-mwm-admin-event-types.php:214
 msgid "Meeting type deleted."
 msgstr ""
 
@@ -274,180 +285,251 @@ msgstr ""
 msgid "Style settings saved."
 msgstr ""
 
-#: admin/class-mwm-admin.php:34
-#: admin/class-mwm-admin.php:35
-#: admin/class-mwm-admin.php:265
+#: admin/class-mwm-admin.php:38
+#: admin/class-mwm-admin.php:39
+#: admin/class-mwm-admin.php:291
 #: admin/views/bookings/detail.php:32
 #: admin/views/bookings/list.php:17
 msgid "Bookings"
 msgstr ""
 
-#: admin/class-mwm-admin.php:43
-#: admin/class-mwm-admin.php:44
-#: admin/class-mwm-admin.php:277
-#: admin/views/event-types/edit.php:51
+#: admin/class-mwm-admin.php:47
+#: admin/class-mwm-admin.php:48
+#: admin/class-mwm-admin.php:303
+#: admin/views/event-types/edit.php:105
 #: admin/views/event-types/list.php:16
 msgid "Meeting Types"
 msgstr ""
 
-#: admin/class-mwm-admin.php:52
-#: admin/class-mwm-admin.php:53
-#: admin/class-mwm-admin.php:289
+#: admin/class-mwm-admin.php:56
+#: admin/class-mwm-admin.php:57
+#: admin/class-mwm-admin.php:315
 #: admin/views/settings/help.php:87
 msgid "Settings"
 msgstr ""
 
-#: admin/class-mwm-admin.php:208
+#: admin/class-mwm-admin.php:219
 msgid "Are you sure?"
 msgstr ""
 
-#: admin/class-mwm-admin.php:209
+#: admin/class-mwm-admin.php:220
 msgid "Copied!"
 msgstr ""
 
-#: admin/class-mwm-admin.php:210
+#: admin/class-mwm-admin.php:221
 msgid "Copied to clipboard."
 msgstr ""
 
-#: admin/class-mwm-admin.php:211
+#: admin/class-mwm-admin.php:222
 msgid "Text selected — press Ctrl/Cmd+C to copy."
 msgstr ""
 
-#: admin/class-mwm-admin.php:212
+#: admin/class-mwm-admin.php:223
 #: public/class-mwm-public.php:503
 msgid "Loading…"
 msgstr ""
 
-#: admin/class-mwm-admin.php:213
+#: admin/class-mwm-admin.php:224
 #: admin/views/settings/google.php:245
 msgid "Refresh My Calendars"
 msgstr ""
 
-#: admin/class-mwm-admin.php:214
+#: admin/class-mwm-admin.php:225
 msgid "Could not load calendars."
 msgstr ""
 
-#: admin/class-mwm-admin.php:215
+#: admin/class-mwm-admin.php:226
 #: public/class-mwm-public.php:504
 msgid "Request failed. Please try again."
 msgstr ""
 
-#: admin/class-mwm-admin.php:216
+#: admin/class-mwm-admin.php:227
 msgid "No calendars were returned from Google."
 msgstr ""
 
-#: admin/class-mwm-admin.php:217
+#: admin/class-mwm-admin.php:228
 #: admin/views/settings/google.php:229
 msgid "Read only"
 msgstr ""
 
-#: admin/class-mwm-admin.php:218
+#: admin/class-mwm-admin.php:229
 #: admin/views/settings/google.php:226
 msgid "(primary)"
 msgstr ""
 
-#: admin/class-mwm-admin.php:219
+#: admin/class-mwm-admin.php:230
 #: admin/views/settings/google.php:258
 msgid "Do not create Google Calendar events"
 msgstr ""
 
-#: admin/class-mwm-admin.php:220
-#: admin/views/event-types/edit.php:210
+#: admin/class-mwm-admin.php:231
+#: admin/views/event-types/edit.php:383
 msgid "Select a routing field above to map specific answers to connected providers."
 msgstr ""
 
-#: admin/class-mwm-admin.php:221
-#: admin/views/event-types/edit.php:192
+#: admin/class-mwm-admin.php:232
+#: admin/views/event-types/edit.php:365
 msgid "No conditional routing"
 msgstr ""
 
-#: admin/class-mwm-admin.php:222
-#: admin/views/event-types/edit.php:216
+#: admin/class-mwm-admin.php:233
+#: admin/views/event-types/edit.php:389
 msgid "Use default provider"
 msgstr ""
 
-#: admin/class-mwm-admin.php:223
+#: admin/class-mwm-admin.php:234
 msgid "Option text"
 msgstr ""
 
-#: admin/class-mwm-admin.php:224
+#: admin/class-mwm-admin.php:235
 msgid "Remove option"
 msgstr ""
 
-#: admin/class-mwm-admin.php:225
-#: admin/views/event-types/edit.php:343
+#: admin/class-mwm-admin.php:236
+#: admin/views/event-types/edit.php:510
 msgid "Move question up"
 msgstr ""
 
-#: admin/class-mwm-admin.php:226
-#: admin/views/event-types/edit.php:344
+#: admin/class-mwm-admin.php:237
+#: admin/views/event-types/edit.php:511
 msgid "Move question down"
 msgstr ""
 
-#: admin/class-mwm-admin.php:227
+#: admin/class-mwm-admin.php:238
 msgid "Testing…"
 msgstr ""
 
-#: admin/class-mwm-admin.php:228
+#: admin/class-mwm-admin.php:239
 #: admin/views/settings/meetings.php:102
 msgid "Test Connection"
 msgstr ""
 
-#: admin/class-mwm-admin.php:267
+#: admin/class-mwm-admin.php:240
+msgid "Saving…"
+msgstr ""
+
+#. translators: %s = time of day
+#: admin/class-mwm-admin.php:242
+#, php-format
+msgid "Saved %s"
+msgstr ""
+
+#: admin/class-mwm-admin.php:243
+msgid "Save failed — click to retry"
+msgstr ""
+
+#: admin/class-mwm-admin.php:244
+#: admin/views/event-types/edit.php:432
+msgid "Save Changes"
+msgstr ""
+
+#: admin/class-mwm-admin.php:245
+msgid "Move option up"
+msgstr ""
+
+#: admin/class-mwm-admin.php:246
+msgid "Move option down"
+msgstr ""
+
+#: admin/class-mwm-admin.php:247
+#: admin/views/event-types/edit.php:484
+msgid "Drag to reorder"
+msgstr ""
+
+#: admin/class-mwm-admin.php:248
+msgid "Untitled meeting type"
+msgstr ""
+
+#: admin/class-mwm-admin.php:249
+msgid "No questions yet — add one to see it here."
+msgstr ""
+
+#. translators: standard wizard strings reused by the editor preview
+#: admin/class-mwm-admin.php:251
+#: admin/views/bookings/detail.php:110
+#: admin/views/event-types/edit.php:129
+#: admin/views/event-types/list.php:44
+#: public/class-mwm-public.php:564
+msgid "Name"
+msgstr ""
+
+#: admin/class-mwm-admin.php:252
+#: admin/views/bookings/detail.php:114
+#: public/class-mwm-public.php:566
+msgid "Email"
+msgstr ""
+
+#: admin/class-mwm-admin.php:253
+#: public/class-mwm-public.php:509
+msgid "Your details"
+msgstr ""
+
+#: admin/class-mwm-admin.php:254
+#: admin/views/event-types/edit.php:203
+#: admin/views/event-types/edit.php:211
+#: admin/views/event-types/list.php:77
+#: public/class-mwm-public.php:514
+#: public/views/event-type-card.php:10
+msgid "min"
+msgstr ""
+
+#: admin/class-mwm-admin.php:293
 msgid "Every booking made through your booking forms appears on this screen. Use the status links to filter, and the search box to find a booker by name or email."
 msgstr ""
 
-#: admin/class-mwm-admin.php:268
+#: admin/class-mwm-admin.php:294
 msgid "Click a booker to open the booking details, where you can add private notes, cancel the booking, or copy the booker’s private cancel/reschedule link."
 msgstr ""
 
-#: admin/class-mwm-admin.php:279
+#: admin/class-mwm-admin.php:305
 msgid "Meeting types define what people can book: duration, format, buffers, booking limits, and any custom questions."
 msgstr ""
 
-#: admin/class-mwm-admin.php:280
+#: admin/class-mwm-admin.php:306
 msgid "Embed them anywhere with the shortcodes shown in the sidebar of each meeting type, e.g. [mwm_cards], [mwm_button event_type=\"your-slug\"], or [mwm_booking_form event_type=\"your-slug\"]."
 msgstr ""
 
-#: admin/class-mwm-admin.php:291
-msgid "General sets your name, notification email, timezone, and booking windows. Availability controls your weekly hours, date overrides, and days off."
+#: admin/class-mwm-admin.php:317
+msgid "General sets your name, notification email, timezone, and booking windows. Default Availability controls your weekly hours, date overrides, and days off. Meeting types can override their weekly hours."
 msgstr ""
 
-#: admin/class-mwm-admin.php:292
+#: admin/class-mwm-admin.php:318
 msgid "Google Calendar and Online Meetings connect external services. Style controls the front-end appearance. Email Templates lets you customise every notification."
 msgstr ""
 
 #. translators: %s = link to the Help & Setup tab
-#: admin/class-mwm-admin.php:295
+#: admin/class-mwm-admin.php:321
 #, php-format
 msgid "Need a walkthrough? See %s."
 msgstr ""
 
-#: admin/class-mwm-admin.php:296
+#: admin/class-mwm-admin.php:322
 #: includes/class-mwm-plugin.php:249
 msgid "Help & Setup"
 msgstr ""
 
-#: admin/class-mwm-admin.php:304
+#: admin/class-mwm-admin.php:330
 msgid "Full help & setup →"
 msgstr ""
 
 #. translators: 1: booking ID, 2: error reason
-#: admin/class-mwm-admin.php:333
+#: admin/class-mwm-admin.php:359
 #, php-format
 msgid "A Zoom meeting could not be created for booking #%1$d: %2$s"
 msgstr ""
 
-#: admin/class-mwm-admin.php:339
+#: admin/class-mwm-admin.php:365
 msgid "Dismiss"
 msgstr ""
 
-#: admin/class-mwm-admin.php:382
+#: admin/class-mwm-admin.php:408
 msgid "Connected to Zoom successfully."
 msgstr ""
 
 #: admin/views/bookings/detail.php:25
 #: admin/views/bookings/list.php:95
+#: admin/views/event-types/edit.php:466
+#: admin/views/event-types/edit.php:503
 #: admin/views/event-types/list.php:80
 #: includes/class-mwm-booking.php:280
 #: includes/class-mwm-google-calendar.php:449
@@ -458,6 +540,8 @@ msgstr ""
 
 #: admin/views/bookings/detail.php:26
 #: admin/views/bookings/list.php:96
+#: admin/views/event-types/edit.php:467
+#: admin/views/event-types/edit.php:507
 #: admin/views/event-types/list.php:81
 #: includes/class-mwm-booking.php:281
 #: public/class-mwm-public.php:516
@@ -502,18 +586,6 @@ msgstr ""
 
 #: admin/views/bookings/detail.php:106
 msgid "Booker Information"
-msgstr ""
-
-#: admin/views/bookings/detail.php:110
-#: admin/views/event-types/edit.php:76
-#: admin/views/event-types/list.php:44
-#: public/class-mwm-public.php:564
-msgid "Name"
-msgstr ""
-
-#: admin/views/bookings/detail.php:114
-#: public/class-mwm-public.php:566
-msgid "Email"
 msgstr ""
 
 #: admin/views/bookings/detail.php:119
@@ -573,6 +645,7 @@ msgid "Click to copy."
 msgstr ""
 
 #: admin/views/bookings/list.php:9
+#: admin/views/event-types/edit.php:465
 msgid "All"
 msgstr ""
 
@@ -640,263 +713,371 @@ msgstr ""
 msgid "Edit Meeting Type"
 msgstr ""
 
-#: admin/views/event-types/edit.php:73
-msgid "Basics"
+#: admin/views/event-types/edit.php:79
+#: admin/views/settings/availability.php:8
+msgid "Monday"
 msgstr ""
 
-#: admin/views/event-types/edit.php:79
-msgid "e.g. 30-Minute Intro Call"
+#: admin/views/event-types/edit.php:80
+#: admin/views/settings/availability.php:9
+msgid "Tuesday"
+msgstr ""
+
+#: admin/views/event-types/edit.php:81
+#: admin/views/settings/availability.php:10
+msgid "Wednesday"
+msgstr ""
+
+#: admin/views/event-types/edit.php:82
+#: admin/views/settings/availability.php:11
+msgid "Thursday"
 msgstr ""
 
 #: admin/views/event-types/edit.php:83
+#: admin/views/settings/availability.php:12
+msgid "Friday"
+msgstr ""
+
+#: admin/views/event-types/edit.php:84
+#: admin/views/settings/availability.php:13
+msgid "Saturday"
+msgstr ""
+
+#: admin/views/event-types/edit.php:85
+#: admin/views/settings/availability.php:7
+msgid "Sunday"
+msgstr ""
+
+#: admin/views/event-types/edit.php:126
+msgid "Basics"
+msgstr ""
+
+#: admin/views/event-types/edit.php:132
+msgid "e.g. 30-Minute Intro Call"
+msgstr ""
+
+#: admin/views/event-types/edit.php:136
 msgid "Slug"
 msgstr ""
 
-#: admin/views/event-types/edit.php:87
+#: admin/views/event-types/edit.php:140
 msgid "auto-generated"
 msgstr ""
 
-#: admin/views/event-types/edit.php:89
+#: admin/views/event-types/edit.php:142
 msgid "Used in shortcodes: [mwm_button event_type=\"your-slug\"]"
 msgstr ""
 
-#: admin/views/event-types/edit.php:93
+#: admin/views/event-types/edit.php:146
 #: admin/views/settings/help.php:125
 #: admin/views/settings/help.php:143
 #: admin/views/settings/help.php:161
 msgid "Description"
 msgstr ""
 
-#: admin/views/event-types/edit.php:95
+#: admin/views/event-types/edit.php:148
 msgid "Shown on the booking card. Briefly describe what this meeting is for."
 msgstr ""
 
-#: admin/views/event-types/edit.php:101
+#: admin/views/event-types/edit.php:153
 msgid "Duration & Format"
 msgstr ""
 
-#: admin/views/event-types/edit.php:104
+#: admin/views/event-types/edit.php:156
 #: admin/views/event-types/list.php:45
 msgid "Duration"
 msgstr ""
 
-#: admin/views/event-types/edit.php:113
+#: admin/views/event-types/edit.php:165
 msgid "Custom&hellip;"
 msgstr ""
 
-#: admin/views/event-types/edit.php:117
+#: admin/views/event-types/edit.php:169
 msgid "Custom duration in minutes"
 msgstr ""
 
-#: admin/views/event-types/edit.php:120
+#: admin/views/event-types/edit.php:172
 #: public/views/manage-booking.php:58
 msgid "minutes"
 msgstr ""
 
-#: admin/views/event-types/edit.php:126
+#: admin/views/event-types/edit.php:178
 #: admin/views/event-types/list.php:46
 msgid "Meeting Format"
 msgstr ""
 
-#: admin/views/event-types/edit.php:130
+#: admin/views/event-types/edit.php:182
 msgid "Online only"
 msgstr ""
 
-#: admin/views/event-types/edit.php:131
+#: admin/views/event-types/edit.php:183
 msgid "In person only"
 msgstr ""
 
-#: admin/views/event-types/edit.php:132
+#: admin/views/event-types/edit.php:184
 msgid "Let the booker choose"
 msgstr ""
 
-#: admin/views/event-types/edit.php:147
+#: admin/views/event-types/edit.php:199
 msgid "Buffer Before"
 msgstr ""
 
-#: admin/views/event-types/edit.php:151
-#: admin/views/event-types/edit.php:159
-#: admin/views/event-types/list.php:77
-#: public/class-mwm-public.php:514
-#: public/views/event-type-card.php:10
-msgid "min"
-msgstr ""
-
-#: admin/views/event-types/edit.php:152
+#: admin/views/event-types/edit.php:204
 msgid "Padding before each meeting."
 msgstr ""
 
-#: admin/views/event-types/edit.php:155
+#: admin/views/event-types/edit.php:207
 msgid "Buffer After"
 msgstr ""
 
-#: admin/views/event-types/edit.php:160
+#: admin/views/event-types/edit.php:212
 msgid "Padding after each meeting."
 msgstr ""
 
-#: admin/views/event-types/edit.php:166
-msgid "Online Meeting Automation"
-msgstr ""
-
-#: admin/views/event-types/edit.php:168
-msgid "Only applies when the booking format is online. Pick a default provider and optionally override it based on a dropdown or radio question like \"Work or personal?\""
-msgstr ""
-
-#: admin/views/event-types/edit.php:173
-msgid "No online meeting providers are configured yet. Set up Zoom or Google Meet in Settings → Online Meetings before assigning one here."
-msgstr ""
-
-#: admin/views/event-types/edit.php:177
-msgid "Default Provider"
-msgstr ""
-
-#: admin/views/event-types/edit.php:179
-msgid "Do not auto-create an online meeting link"
-msgstr ""
-
-#: admin/views/event-types/edit.php:186
-msgid "Used for online bookings unless a routing rule below overrides it."
-msgstr ""
-
-#: admin/views/event-types/edit.php:190
-msgid "Conditional Routing Field"
-msgstr ""
-
-#: admin/views/event-types/edit.php:199
-msgid "Choose a dropdown or radio question if certain answers should use a different provider."
-msgstr ""
-
-#: admin/views/event-types/edit.php:203
-msgid "Routing Rules"
-msgstr ""
-
-#: admin/views/event-types/edit.php:233
+#: admin/views/event-types/edit.php:218
 msgid "Booking Limits"
 msgstr ""
 
-#: admin/views/event-types/edit.php:234
+#: admin/views/event-types/edit.php:219
 msgid "Leave blank for no limit."
 msgstr ""
 
-#: admin/views/event-types/edit.php:238
+#: admin/views/event-types/edit.php:223
 msgid "Max per Day"
 msgstr ""
 
-#: admin/views/event-types/edit.php:244
+#: admin/views/event-types/edit.php:229
 msgid "Max per Week"
 msgstr ""
 
-#: admin/views/event-types/edit.php:254
-msgid "Questions for the Booker"
+#: admin/views/event-types/edit.php:237
+#: admin/views/settings/availability.php:187
+#: admin/views/settings/availability.php:188
+msgid "Availability"
 msgstr ""
 
-#: admin/views/event-types/edit.php:256
-msgid "Add questions that appear on the booking form for this meeting type. Drag to reorder, or use the up/down buttons."
+#: admin/views/event-types/edit.php:239
+msgid "Schedule"
 msgstr ""
 
-#: admin/views/event-types/edit.php:264
-msgid "Add a Question"
+#: admin/views/event-types/edit.php:243
+msgid "Use default hours"
 msgstr ""
 
-#: admin/views/event-types/edit.php:274
-msgid "Publish"
+#: admin/views/event-types/edit.php:247
+msgid "Custom hours for this type"
 msgstr ""
 
-#: admin/views/event-types/edit.php:280
-msgid "Active (visible to bookers)"
+#: admin/views/event-types/edit.php:250
+msgid "Default hours come from Settings → Default Availability. Date overrides and days off always apply."
 msgstr ""
 
-#: admin/views/event-types/edit.php:285
-msgid "Color"
+#: admin/views/event-types/edit.php:263
+#: admin/views/event-types/edit.php:294
+#: admin/views/settings/availability.php:94
+msgid "Off"
 msgstr ""
 
-#: admin/views/event-types/edit.php:288
-msgid "Used on booking cards."
-msgstr ""
-
-#: admin/views/event-types/edit.php:293
-msgid "Create Meeting Type"
-msgstr ""
-
-#: admin/views/event-types/edit.php:293
-msgid "Save Changes"
-msgstr ""
-
-#: admin/views/event-types/edit.php:296
-#: admin/views/settings/availability.php:217
-#: admin/views/settings/availability.php:296
-msgid "Cancel"
+#: admin/views/event-types/edit.php:269
+msgid "Defaults — shared by every meeting type without custom hours."
 msgstr ""
 
 #: admin/views/event-types/edit.php:303
-msgid "Shortcodes"
+msgid "Questions for the Booker"
 msgstr ""
 
-#: admin/views/event-types/edit.php:304
-msgid "Copy and paste these into any page or widget."
+#: admin/views/event-types/edit.php:305
+msgid "Add questions that appear on the booking form for this meeting type. Drag to reorder, or use the up/down buttons."
 msgstr ""
 
-#: admin/views/event-types/edit.php:307
-msgid "Button"
+#: admin/views/event-types/edit.php:313
+msgid "Add a Question"
 msgstr ""
 
-#: admin/views/event-types/edit.php:311
-msgid "Full booking form"
+#: admin/views/event-types/edit.php:317
+msgid "Online Meeting Automation"
 msgstr ""
 
-#: admin/views/event-types/edit.php:328
-msgid "Drag to reorder"
+#: admin/views/event-types/edit.php:319
+msgid "Applies to online bookings. Route bookers to a connected provider — optionally based on one of your questions above."
 msgstr ""
 
-#: admin/views/event-types/edit.php:331
-msgid "Question label"
+#: admin/views/event-types/edit.php:325
+msgid "No online meeting providers are configured yet. Set up Zoom or Google Meet in Settings → Online Meetings, then come back here."
 msgstr ""
 
-#: admin/views/event-types/edit.php:331
-msgid "Question label, e.g. Where should we meet?"
-msgstr ""
-
-#: admin/views/event-types/edit.php:332
-msgid "Question type"
+#: admin/views/event-types/edit.php:329
+msgid "Automatically create an online meeting"
 msgstr ""
 
 #: admin/views/event-types/edit.php:333
-msgid "Short text"
+msgid "No"
 msgstr ""
 
 #: admin/views/event-types/edit.php:334
-msgid "Long text"
+msgid "Yes"
 msgstr ""
 
 #: admin/views/event-types/edit.php:335
-msgid "Dropdown"
-msgstr ""
-
-#: admin/views/event-types/edit.php:336
-msgid "Radio (pick one)"
-msgstr ""
-
-#: admin/views/event-types/edit.php:337
-msgid "Checkboxes (pick multiple)"
-msgstr ""
-
-#: admin/views/event-types/edit.php:341
-msgid "Required"
-msgstr ""
-
-#: admin/views/event-types/edit.php:345
-msgid "Remove question"
-msgstr ""
-
-#: admin/views/event-types/edit.php:349
-msgid "Placeholder text"
+msgid "Conditional"
 msgstr ""
 
 #: admin/views/event-types/edit.php:350
+msgid "Provider"
+msgstr ""
+
+#: admin/views/event-types/edit.php:352
+msgid "Choose a provider&hellip;"
+msgstr ""
+
+#: admin/views/event-types/edit.php:359
+msgid "Connected providers only. Disconnecting a provider later leaves bookings intact."
+msgstr ""
+
+#: admin/views/event-types/edit.php:363
+msgid "Route By"
+msgstr ""
+
+#: admin/views/event-types/edit.php:372
+msgid "Choose a dropdown or radio question if certain answers should use a different provider."
+msgstr ""
+
+#: admin/views/event-types/edit.php:376
+msgid "Routing Rules"
+msgstr ""
+
+#: admin/views/event-types/edit.php:411
+msgid "Publish"
+msgstr ""
+
+#: admin/views/event-types/edit.php:417
+msgid "Active (visible to bookers)"
+msgstr ""
+
+#: admin/views/event-types/edit.php:422
+msgid "Color"
+msgstr ""
+
+#: admin/views/event-types/edit.php:425
+msgid "Used on booking cards."
+msgstr ""
+
+#: admin/views/event-types/edit.php:432
+msgid "Create Meeting Type"
+msgstr ""
+
+#: admin/views/event-types/edit.php:435
+msgid "Back to list"
+msgstr ""
+
+#: admin/views/event-types/edit.php:442
+msgid "Shortcodes"
+msgstr ""
+
+#: admin/views/event-types/edit.php:443
+msgid "Copy and paste these into any page or widget."
+msgstr ""
+
+#: admin/views/event-types/edit.php:446
+msgid "Button"
+msgstr ""
+
+#: admin/views/event-types/edit.php:450
+msgid "Full booking form"
+msgstr ""
+
+#: admin/views/event-types/edit.php:458
+#: admin/views/settings/style.php:156
+msgid "Preview"
+msgstr ""
+
+#: admin/views/event-types/edit.php:460
+msgid "Move preview to the main column or back to the sidebar"
+msgstr ""
+
+#: admin/views/event-types/edit.php:461
+msgid "Move preview"
+msgstr ""
+
+#: admin/views/event-types/edit.php:464
+msgid "Preview meeting format"
+msgstr ""
+
+#: admin/views/event-types/edit.php:470
+msgid "Live preview — updates as you edit. Not clickable."
+msgstr ""
+
+#: admin/views/event-types/edit.php:487
+msgid "Question label"
+msgstr ""
+
+#: admin/views/event-types/edit.php:487
+msgid "Question label, e.g. Where should we meet?"
+msgstr ""
+
+#: admin/views/event-types/edit.php:488
+msgid "Question type"
+msgstr ""
+
+#: admin/views/event-types/edit.php:489
+msgid "Short text"
+msgstr ""
+
+#: admin/views/event-types/edit.php:490
+msgid "Long text"
+msgstr ""
+
+#: admin/views/event-types/edit.php:491
+msgid "Dropdown"
+msgstr ""
+
+#: admin/views/event-types/edit.php:492
+msgid "Radio (pick one)"
+msgstr ""
+
+#: admin/views/event-types/edit.php:493
+msgid "Checkboxes (pick multiple)"
+msgstr ""
+
+#: admin/views/event-types/edit.php:497
+msgid "Required"
+msgstr ""
+
+#: admin/views/event-types/edit.php:500
+msgid "Display this question for:"
+msgstr ""
+
+#: admin/views/event-types/edit.php:512
+msgid "Remove question"
+msgstr ""
+
+#: admin/views/event-types/edit.php:516
+msgid "Placeholder text"
+msgstr ""
+
+#: admin/views/event-types/edit.php:517
 msgid "Placeholder text (optional)"
 msgstr ""
 
-#: admin/views/event-types/edit.php:354
+#: admin/views/event-types/edit.php:522
+#: admin/views/event-types/edit.php:523
+msgid "Option layout"
+msgstr ""
+
+#: admin/views/event-types/edit.php:524
+msgid "Stacked"
+msgstr ""
+
+#: admin/views/event-types/edit.php:525
+msgid "Inline"
+msgstr ""
+
+#: admin/views/event-types/edit.php:526
+#: blocks/cards/block-editor.js:171
+msgid "Columns"
+msgstr ""
+
+#: admin/views/event-types/edit.php:531
 msgid "Add option"
 msgstr ""
 
@@ -944,34 +1125,6 @@ msgstr ""
 msgid "Delete"
 msgstr ""
 
-#: admin/views/settings/availability.php:7
-msgid "Sunday"
-msgstr ""
-
-#: admin/views/settings/availability.php:8
-msgid "Monday"
-msgstr ""
-
-#: admin/views/settings/availability.php:9
-msgid "Tuesday"
-msgstr ""
-
-#: admin/views/settings/availability.php:10
-msgid "Wednesday"
-msgstr ""
-
-#: admin/views/settings/availability.php:11
-msgid "Thursday"
-msgstr ""
-
-#: admin/views/settings/availability.php:12
-msgid "Friday"
-msgstr ""
-
-#: admin/views/settings/availability.php:13
-msgid "Saturday"
-msgstr ""
-
 #: admin/views/settings/availability.php:29
 #: admin/views/settings/email.php:8
 #: admin/views/settings/general.php:9
@@ -983,7 +1136,7 @@ msgid "Meet With Me — Settings"
 msgstr ""
 
 #: admin/views/settings/availability.php:41
-msgid "Your Weekly Hours"
+msgid "Default Weekly Hours"
 msgstr ""
 
 #: admin/views/settings/availability.php:43
@@ -1006,12 +1159,8 @@ msgstr ""
 msgid "%s end time"
 msgstr ""
 
-#: admin/views/settings/availability.php:94
-msgid "Off"
-msgstr ""
-
 #: admin/views/settings/availability.php:102
-msgid "Save Weekly Hours"
+msgid "Save Default Hours"
 msgstr ""
 
 #: admin/views/settings/availability.php:110
@@ -1057,12 +1206,6 @@ msgstr ""
 msgid "Add Override"
 msgstr ""
 
-#: admin/views/settings/availability.php:187
-#: admin/views/settings/availability.php:188
-#: includes/class-mwm-plugin.php:244
-msgid "Availability"
-msgstr ""
-
 #: admin/views/settings/availability.php:197
 msgid "Unavailable all day"
 msgstr ""
@@ -1073,6 +1216,11 @@ msgstr ""
 
 #: admin/views/settings/availability.php:208
 msgid "Override end time"
+msgstr ""
+
+#: admin/views/settings/availability.php:217
+#: admin/views/settings/availability.php:296
+msgid "Cancel"
 msgstr ""
 
 #: admin/views/settings/availability.php:226
@@ -1396,7 +1544,7 @@ msgstr ""
 #. translators: %s = link to the General settings tab
 #: admin/views/settings/help.php:57
 #, php-format
-msgid "Set your name, notification email, and timezone under %s, then tune your weekly hours under Availability."
+msgid "Set your name, notification email, and timezone under %s, then tune your weekly hours under Default Availability."
 msgstr ""
 
 #: admin/views/settings/help.php:58
@@ -1913,10 +2061,6 @@ msgstr ""
 msgid "Extra CSS applied after the plugin stylesheet. Prefix selectors with .mwm- to keep changes scoped to Meet With Me."
 msgstr ""
 
-#: admin/views/settings/style.php:156
-msgid "Preview"
-msgstr ""
-
 #: admin/views/settings/style.php:158
 msgid "Saved settings preview. Save changes to refresh it."
 msgstr ""
@@ -1943,7 +2087,7 @@ msgstr ""
 #: api/class-mwm-rest.php:195
 #: api/class-mwm-rest.php:240
 #: api/class-mwm-rest.php:304
-#: api/class-mwm-rest.php:621
+#: api/class-mwm-rest.php:623
 msgid "Meeting type not found."
 msgstr ""
 
@@ -1953,14 +2097,14 @@ msgid "Invalid month."
 msgstr ""
 
 #: api/class-mwm-rest.php:233
-#: api/class-mwm-rest.php:548
-#: api/class-mwm-rest.php:597
+#: api/class-mwm-rest.php:550
+#: api/class-mwm-rest.php:599
 msgid "Invalid token."
 msgstr ""
 
 #: api/class-mwm-rest.php:236
-#: api/class-mwm-rest.php:552
-#: api/class-mwm-rest.php:601
+#: api/class-mwm-rest.php:554
+#: api/class-mwm-rest.php:603
 msgid "This booking is not active."
 msgstr ""
 
@@ -1979,52 +2123,52 @@ msgid "Please enter a valid email address."
 msgstr ""
 
 #: api/class-mwm-rest.php:314
-#: api/class-mwm-rest.php:616
+#: api/class-mwm-rest.php:618
 msgid "Invalid datetime format."
 msgstr ""
 
-#: api/class-mwm-rest.php:339
-#: api/class-mwm-rest.php:630
+#: api/class-mwm-rest.php:341
+#: api/class-mwm-rest.php:632
 msgid "Sorry, that time is no longer available. Please choose another slot."
 msgstr ""
 
-#: api/class-mwm-rest.php:390
-#: api/class-mwm-rest.php:676
+#: api/class-mwm-rest.php:392
+#: api/class-mwm-rest.php:678
 msgid "Sorry, that time was just taken. Please choose another slot."
 msgstr ""
 
-#: api/class-mwm-rest.php:392
+#: api/class-mwm-rest.php:394
 msgid "Could not save your booking. Please try again."
 msgstr ""
 
-#: api/class-mwm-rest.php:542
+#: api/class-mwm-rest.php:544
 msgid "Missing cancel token."
 msgstr ""
 
-#: api/class-mwm-rest.php:591
+#: api/class-mwm-rest.php:593
 msgid "Missing required fields."
 msgstr ""
 
-#: api/class-mwm-rest.php:611
+#: api/class-mwm-rest.php:613
 msgid "Cannot reschedule this close to the meeting time."
 msgstr ""
 
-#: api/class-mwm-rest.php:678
+#: api/class-mwm-rest.php:680
 msgid "Could not save your new booking. Please try again."
 msgstr ""
 
-#: api/class-mwm-rest.php:753
+#: api/class-mwm-rest.php:755
 msgid "Too many booking attempts from this connection. Please wait a few minutes and try again."
 msgstr ""
 
-#: api/class-mwm-rest.php:779
-#: api/class-mwm-rest.php:783
-#: api/class-mwm-rest.php:788
-#: api/class-mwm-rest.php:794
+#: api/class-mwm-rest.php:781
+#: api/class-mwm-rest.php:785
+#: api/class-mwm-rest.php:790
+#: api/class-mwm-rest.php:796
 msgid "Invalid booking request."
 msgstr ""
 
-#: api/class-mwm-rest.php:803
+#: api/class-mwm-rest.php:805
 msgid "The booking service could not verify this request. Please try again shortly."
 msgstr ""
 
@@ -2119,6 +2263,10 @@ msgstr ""
 
 #: includes/class-mwm-plugin.php:153
 msgid "If the administrator uses the optional plugins.tapps.design Google connection relay, that service handles the site callback URL, temporary connection ticket, authorization code, and OAuth tokens during connection. Subsequent calendar operations communicate directly with Google. Booking emails use the site’s configured mail provider."
+msgstr ""
+
+#: includes/class-mwm-plugin.php:244
+msgid "Default Availability"
 msgstr ""
 
 #: includes/class-mwm-plugin.php:245
@@ -2222,10 +2370,6 @@ msgstr ""
 
 #: public/class-mwm-public.php:508
 msgid "Choose a time"
-msgstr ""
-
-#: public/class-mwm-public.php:509
-msgid "Your details"
 msgstr ""
 
 #. translators: 1: step number, 2: step title
@@ -2719,10 +2863,6 @@ msgstr ""
 
 #: blocks/cards/block-editor.js:169
 msgid "Cards settings"
-msgstr ""
-
-#: blocks/cards/block-editor.js:171
-msgid "Columns"
 msgstr ""
 
 #: blocks/cards/block-editor.js:179

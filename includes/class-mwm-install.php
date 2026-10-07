@@ -42,6 +42,7 @@ class MWM_Install {
 			max_per_week int(11) DEFAULT NULL,
 			color varchar(7) NOT NULL DEFAULT '#3b82f6',
 			fields longtext DEFAULT NULL,
+			availability_override longtext DEFAULT NULL,
 			is_active tinyint(1) NOT NULL DEFAULT 1,
 			created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			PRIMARY KEY  (id),

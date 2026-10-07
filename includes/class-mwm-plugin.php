@@ -241,7 +241,7 @@ class MWM_Plugin {
 function mwm_admin_tabs( string $current ): void { // phpcs:ignore Universal.Files.SeparateFunctionsFromOO.Mixed -- shared template helpers
 	$tabs = array(
 		'general'      => __( 'General', 'meet-with-me' ),
-		'availability' => __( 'Availability', 'meet-with-me' ),
+		'availability' => __( 'Default Availability', 'meet-with-me' ),
 		'google'       => __( 'Google Calendar', 'meet-with-me' ),
 		'meetings'     => __( 'Online Meetings', 'meet-with-me' ),
 		'email'        => __( 'Email Templates', 'meet-with-me' ),

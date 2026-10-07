@@ -26,6 +26,7 @@ $et = array_merge(
 		'max_per_week'            => '',
 		'color'                   => '#3b82f6',
 		'fields'                  => array(),
+		'availability_override'   => null,
 		'is_active'               => true,
 	),
 	$event_type ?? array()
@@ -44,6 +45,60 @@ foreach ( $routing_fields as $routing_field ) {
 		break;
 	}
 }
+
+// Automation mode is derived from the stored provider/routing data:
+// no provider = off, provider + routing field = conditional, provider = always.
+$automation_mode = ( $et['online_provider'] === '' ) ? 'none'
+	: ( ( $et['online_routing_field_id'] !== '' ) ? 'conditional' : 'always' );
+
+// Availability: the type's override (weekly shape) and the global defaults.
+$type_weekly = array();
+if ( ! empty( $et['availability_override']['weekly'] ) && is_array( $et['availability_override']['weekly'] ) ) {
+	$type_weekly = $et['availability_override']['weekly'];
+}
+$availability_mode = empty( $type_weekly ) ? 'default' : 'custom';
+
+// Seed the custom grid from the override when set, otherwise from the global
+// defaults so "Custom hours" starts from something sensible.
+$custom_seed = array();
+foreach ( array( 1, 2, 3, 4, 5, 6, 0 ) as $dow ) {
+	$seed = $type_weekly[ $dow ] ?? null;
+	if ( ! is_array( $seed ) && isset( $global_weekly[ $dow ] ) && is_array( $global_weekly[ $dow ] ) ) {
+		$seed = array(
+			'enabled' => $global_weekly[ $dow ]['is_available'],
+			'start'   => $global_weekly[ $dow ]['start'],
+			'end'     => $global_weekly[ $dow ]['end'],
+		);
+	}
+	if ( is_array( $seed ) ) {
+		$custom_seed[ $dow ] = $seed;
+	}
+}
+
+$day_names = array(
+	__( 'Monday', 'meet-with-me' ),
+	__( 'Tuesday', 'meet-with-me' ),
+	__( 'Wednesday', 'meet-with-me' ),
+	__( 'Thursday', 'meet-with-me' ),
+	__( 'Friday', 'meet-with-me' ),
+	__( 'Saturday', 'meet-with-me' ),
+	__( 'Sunday', 'meet-with-me' ),
+);
+
+/**
+ * Open a collapsible card. Closed state is managed by JS + localStorage.
+ */
+$card_open  = function ( string $key, string $title ): void {
+	printf(
+		'<div class="mwm-card mwm-collapsible" data-mwm-section="%1$s"><h2 class="mwm-card__title"><span class="mwm-card-drag-handle" title="%3$s" aria-hidden="true">&#x2807;</span><button type="button" class="mwm-card-toggle" aria-expanded="true"><span>%2$s</span><span class="mwm-card-toggle__arrow" aria-hidden="true"></span></button></h2><div class="mwm-card__body">',
+		esc_attr( $key ),
+		esc_html( $title ),
+		esc_attr__( 'Drag to reorder', 'meet-with-me' )
+	);
+};
+$card_close = function (): void {
+	echo '</div></div>';
+};
 ?>
 <div class="wrap mwm-wrap">
 
@@ -58,19 +113,18 @@ foreach ( $routing_fields as $routing_field ) {
 		</div>
 	<?php endif; ?>
 
-	<form method="post" action="" id="mwm-event-type-form">
+	<form method="post" action="" id="mwm-event-type-form" data-autosave="<?php echo $is_new ? 'off' : 'on'; ?>">
 		<?php wp_nonce_field( 'mwm_save_event_type' ); ?>
-		<input type="hidden" name="event_type_id" value="<?php echo esc_attr( $et['id'] ); ?>">
+		<input type="hidden" name="event_type_id" id="mwm-event-type-id" value="<?php echo esc_attr( $et['id'] ); ?>">
 		<input type="hidden" name="mwm_fields" id="mwm-fields-json" value="<?php echo esc_attr( $fields_json ); ?>">
+		<input type="hidden" name="availability_override" id="mwm-availability-json" value="<?php echo esc_attr( wp_json_encode( $et['availability_override'] ?? null ) ); ?>">
 
 		<div class="mwm-edit-layout">
 
 			<!-- Main column -->
 			<div class="mwm-edit-main">
 
-				<!-- Basics -->
-				<div class="mwm-card">
-					<h2><?php esc_html_e( 'Basics', 'meet-with-me' ); ?></h2>
+				<?php $card_open( 'basics', __( 'Basics', 'meet-with-me' ) ); ?>
 
 					<div class="mwm-field-row">
 						<label for="mwm-name"><?php esc_html_e( 'Name', 'meet-with-me' ); ?> <span class="required">*</span></label>
@@ -94,11 +148,10 @@ foreach ( $routing_fields as $routing_field ) {
 						<textarea id="mwm-description" name="description" class="large-text" rows="3"
 							placeholder="<?php esc_attr_e( 'Shown on the booking card. Briefly describe what this meeting is for.', 'meet-with-me' ); ?>"><?php echo esc_textarea( $et['description'] ); ?></textarea>
 					</div>
-				</div>
 
-				<!-- Duration & Format -->
-				<div class="mwm-card">
-					<h2><?php esc_html_e( 'Duration & Format', 'meet-with-me' ); ?></h2>
+				<?php $card_close(); ?>
+
+				<?php $card_open( 'duration-format', __( 'Duration & Format', 'meet-with-me' ) ); ?>
 
 					<div class="mwm-field-row">
 						<label for="mwm-duration"><?php esc_html_e( 'Duration', 'meet-with-me' ); ?></label>
@@ -123,8 +176,8 @@ foreach ( $routing_fields as $routing_field ) {
 					</div>
 
 					<div class="mwm-field-row">
-						<label><?php esc_html_e( 'Meeting Format', 'meet-with-me' ); ?></label>
-						<div class="mwm-radio-group">
+						<strong id="mwm-meeting-format-label" class="mwm-radio-group-label"><?php esc_html_e( 'Meeting Format', 'meet-with-me' ); ?></strong>
+						<div class="mwm-radio-group" role="radiogroup" aria-labelledby="mwm-meeting-format-label">
 							<?php
 							$formats = array(
 								'online'    => __( 'Online only', 'meet-with-me' ),
@@ -160,34 +213,155 @@ foreach ( $routing_fields as $routing_field ) {
 							<p class="description"><?php esc_html_e( 'Padding after each meeting.', 'meet-with-me' ); ?></p>
 						</div>
 					</div>
-				</div>
 
-				<div class="mwm-card">
-					<h2><?php esc_html_e( 'Online Meeting Automation', 'meet-with-me' ); ?></h2>
+				<?php $card_close(); ?>
+
+				<?php $card_open( 'limits', __( 'Booking Limits', 'meet-with-me' ) ); ?>
+					<p class="description" style="margin-bottom:16px;"><?php esc_html_e( 'Leave blank for no limit.', 'meet-with-me' ); ?></p>
+
+					<div class="mwm-field-row mwm-field-row--inline">
+						<div>
+							<label for="mwm-max-day"><?php esc_html_e( 'Max per Day', 'meet-with-me' ); ?></label>
+							<input type="number" id="mwm-max-day" name="max_per_day"
+								value="<?php echo esc_attr( $et['max_per_day'] ?? '' ); ?>"
+								min="1" placeholder="&mdash;" class="small-text">
+						</div>
+						<div>
+							<label for="mwm-max-week"><?php esc_html_e( 'Max per Week', 'meet-with-me' ); ?></label>
+							<input type="number" id="mwm-max-week" name="max_per_week"
+								value="<?php echo esc_attr( $et['max_per_week'] ?? '' ); ?>"
+								min="1" placeholder="&mdash;" class="small-text">
+						</div>
+					</div>
+				<?php $card_close(); ?>
+
+				<?php $card_open( 'availability', __( 'Availability', 'meet-with-me' ) ); ?>
+					<div class="mwm-field-row">
+						<strong id="mwm-availability-mode-label" class="mwm-radio-group-label"><?php esc_html_e( 'Schedule', 'meet-with-me' ); ?></strong>
+						<div class="mwm-availability-mode" role="radiogroup" aria-labelledby="mwm-availability-mode-label">
+							<label class="mwm-radio-label">
+								<input type="radio" name="availability_mode" value="default" <?php checked( $availability_mode, 'default' ); ?>>
+								<?php esc_html_e( 'Use default hours', 'meet-with-me' ); ?>
+							</label>
+							<label class="mwm-radio-label">
+								<input type="radio" name="availability_mode" value="custom" <?php checked( $availability_mode, 'custom' ); ?>>
+								<?php esc_html_e( 'Custom hours for this type', 'meet-with-me' ); ?>
+							</label>
+						</div>
+						<p class="description"><?php esc_html_e( 'Default hours come from Settings → Default Availability. Date overrides and days off always apply.', 'meet-with-me' ); ?></p>
+					</div>
+
+					<div id="mwm-availability-ghost" class="mwm-schedule-grid mwm-schedule-grid--ghost">
+						<?php
+						$gi = 0;
+						foreach ( array( 1, 2, 3, 4, 5, 6, 0 ) as $dow ) :
+							$rule  = $global_weekly[ $dow ] ?? null;
+							$on    = $rule && $rule['is_available'];
+							$times = $on ? $rule['start'] . ' &ndash; ' . $rule['end'] : '&mdash;';
+							?>
+							<div class="mwm-schedule-row <?php echo $on ? 'is-enabled' : ''; ?>">
+								<span class="mwm-schedule-day-label"><?php echo esc_html( $day_names[ $gi ] ); ?></span>
+								<span class="mwm-schedule-ghost-times"><?php echo $on ? esc_html( $rule['start'] ) . ' &ndash; ' . esc_html( $rule['end'] ) : esc_html__( 'Off', 'meet-with-me' ); ?></span>
+							</div>
+							<?php
+							++$gi;
+						endforeach;
+						?>
+						<p class="description"><?php esc_html_e( 'Defaults — shared by every meeting type without custom hours.', 'meet-with-me' ); ?></p>
+					</div>
+
+					<div id="mwm-availability-custom" class="mwm-schedule-grid" <?php echo $availability_mode === 'custom' ? '' : 'style="display:none"'; ?>>
+						<?php
+						$ci = 0;
+						foreach ( array( 1, 2, 3, 4, 5, 6, 0 ) as $dow ) :
+							$day = $custom_seed[ $dow ] ?? array(
+								'enabled' => false,
+								'start'   => '09:00',
+								'end'     => '17:00',
+							);
+							?>
+							<div class="mwm-schedule-row<?php echo ! empty( $day['enabled'] ) ? ' is-enabled' : ''; ?>" data-dow="<?php echo esc_attr( $dow ); ?>">
+								<label class="mwm-schedule-day-toggle">
+									<input type="checkbox" class="mwm-day-toggle" name="type_days[<?php echo esc_attr( $dow ); ?>][enabled]" value="1" <?php checked( ! empty( $day['enabled'] ) ); ?>>
+									<span class="mwm-schedule-day-label"><?php echo esc_html( $day_names[ $ci ] ); ?></span>
+								</label>
+								<div class="mwm-schedule-times <?php echo empty( $day['enabled'] ) ? 'mwm-times-disabled' : ''; ?>">
+									<input type="time" class="mwm-time-input" name="type_days[<?php echo esc_attr( $dow ); ?>][start]"
+										value="<?php echo esc_attr( $day['start'] ); ?>" <?php disabled( empty( $day['enabled'] ) ); ?>>
+									&ndash;
+									<input type="time" class="mwm-time-input" name="type_days[<?php echo esc_attr( $dow ); ?>][end]"
+										value="<?php echo esc_attr( $day['end'] ); ?>" <?php disabled( empty( $day['enabled'] ) ); ?>>
+								</div>
+								<span class="mwm-schedule-off-label <?php echo empty( $day['enabled'] ) ? '' : 'mwm-hidden'; ?>"><?php esc_html_e( 'Off', 'meet-with-me' ); ?></span>
+							</div>
+							<?php
+							++$ci;
+						endforeach;
+						?>
+					</div>
+				<?php $card_close(); ?>
+
+				<?php $card_open( 'questions', __( 'Questions for the Booker', 'meet-with-me' ) ); ?>
 					<p class="description" style="margin-bottom:16px;">
-						<?php esc_html_e( 'Only applies when the booking format is online. Pick a default provider and optionally override it based on a dropdown or radio question like "Work or personal?"', 'meet-with-me' ); ?>
+						<?php esc_html_e( 'Add questions that appear on the booking form for this meeting type. Drag to reorder, or use the up/down buttons.', 'meet-with-me' ); ?>
 					</p>
 
-					<?php if ( empty( $provider_choices ) ) : ?>
-						<p class="description">
-							<?php esc_html_e( 'No online meeting providers are configured yet. Set up Zoom or Google Meet in Settings → Online Meetings before assigning one here.', 'meet-with-me' ); ?>
-						</p>
-					<?php else : ?>
-						<div class="mwm-field-row">
-							<label for="mwm-online-provider"><?php esc_html_e( 'Default Provider', 'meet-with-me' ); ?></label>
+					<div id="mwm-fields-list" class="mwm-fields-list">
+						<!-- Rows injected by JS from mwm_fields_json -->
+					</div>
+
+					<button type="button" id="mwm-add-field" class="button">
+						+ <?php esc_html_e( 'Add a Question', 'meet-with-me' ); ?>
+					</button>
+				<?php $card_close(); ?>
+
+				<?php $card_open( 'automation', __( 'Online Meeting Automation', 'meet-with-me' ) ); ?>
+					<p class="description" style="margin-bottom:16px;">
+						<?php esc_html_e( 'Applies to online bookings. Route bookers to a connected provider — optionally based on one of your questions above.', 'meet-with-me' ); ?>
+					</p>
+
+					<div id="mwm-automation-card" data-current-format="<?php echo esc_attr( $et['meeting_type'] ); ?>">
+						<?php if ( empty( $provider_choices ) ) : ?>
+							<p class="description">
+								<?php esc_html_e( 'No online meeting providers are configured yet. Set up Zoom or Google Meet in Settings → Online Meetings, then come back here.', 'meet-with-me' ); ?>
+							</p>
+						<?php else : ?>
+						<div class="mwm-field-row" id="mwm-automation-mode-row">
+							<label id="mwm-automation-mode-label"><?php esc_html_e( 'Automatically create an online meeting', 'meet-with-me' ); ?></label>
+							<div class="mwm-segmented" role="radiogroup" aria-labelledby="mwm-automation-mode-label">
+								<?php
+								$modes = array(
+									'none'        => __( 'No', 'meet-with-me' ),
+									'always'      => __( 'Yes', 'meet-with-me' ),
+									'conditional' => __( 'Conditional', 'meet-with-me' ),
+								);
+								foreach ( $modes as $mode_key => $mode_label ) :
+									?>
+									<label class="mwm-segmented__item">
+										<input type="radio" name="automation_mode" value="<?php echo esc_attr( $mode_key ); ?>"
+											id="mwm-automation-mode-<?php echo esc_attr( $mode_key ); ?>"
+											<?php checked( $automation_mode, $mode_key ); ?>>
+										<span><?php echo esc_html( $mode_label ); ?></span>
+									</label>
+								<?php endforeach; ?>
+							</div>
+						</div>
+
+						<div class="mwm-field-row mwm-automation-provider" id="mwm-automation-provider-row">
+							<label for="mwm-online-provider"><?php esc_html_e( 'Provider', 'meet-with-me' ); ?></label>
 							<select id="mwm-online-provider" name="online_provider" class="regular-text">
-								<option value=""><?php esc_html_e( 'Do not auto-create an online meeting link', 'meet-with-me' ); ?></option>
+								<option value=""><?php esc_html_e( 'Choose a provider&hellip;', 'meet-with-me' ); ?></option>
 								<?php foreach ( $provider_choices as $provider_key => $provider_label ) : ?>
 									<option value="<?php echo esc_attr( $provider_key ); ?>" <?php selected( $et['online_provider'], $provider_key ); ?>>
 										<?php echo esc_html( $provider_label ); ?>
 									</option>
 								<?php endforeach; ?>
 							</select>
-							<p class="description"><?php esc_html_e( 'Used for online bookings unless a routing rule below overrides it.', 'meet-with-me' ); ?></p>
+							<p class="description"><?php esc_html_e( 'Connected providers only. Disconnecting a provider later leaves bookings intact.', 'meet-with-me' ); ?></p>
 						</div>
 
-						<div class="mwm-field-row">
-							<label for="mwm-online-routing-field"><?php esc_html_e( 'Conditional Routing Field', 'meet-with-me' ); ?></label>
+						<div class="mwm-field-row mwm-automation-routing" id="mwm-automation-routing-row">
+							<label for="mwm-online-routing-field"><?php esc_html_e( 'Route By', 'meet-with-me' ); ?></label>
 							<select id="mwm-online-routing-field" name="online_routing_field_id" class="regular-text">
 								<option value=""><?php esc_html_e( 'No conditional routing', 'meet-with-me' ); ?></option>
 								<?php foreach ( $routing_fields as $routing_field ) : ?>
@@ -199,7 +373,7 @@ foreach ( $routing_fields as $routing_field ) {
 							<p class="description"><?php esc_html_e( 'Choose a dropdown or radio question if certain answers should use a different provider.', 'meet-with-me' ); ?></p>
 						</div>
 
-						<div class="mwm-field-row">
+						<div class="mwm-field-row mwm-automation-routing" id="mwm-automation-rules-row">
 							<label><?php esc_html_e( 'Routing Rules', 'meet-with-me' ); ?></label>
 							<div
 								id="mwm-online-provider-rules"
@@ -225,53 +399,17 @@ foreach ( $routing_fields as $routing_field ) {
 								<?php endif; ?>
 							</div>
 						</div>
-					<?php endif; ?>
-				</div>
-
-				<!-- Booking Limits -->
-				<div class="mwm-card">
-					<h2><?php esc_html_e( 'Booking Limits', 'meet-with-me' ); ?></h2>
-					<p class="description" style="margin-bottom:16px;"><?php esc_html_e( 'Leave blank for no limit.', 'meet-with-me' ); ?></p>
-
-					<div class="mwm-field-row mwm-field-row--inline">
-						<div>
-							<label for="mwm-max-day"><?php esc_html_e( 'Max per Day', 'meet-with-me' ); ?></label>
-							<input type="number" id="mwm-max-day" name="max_per_day"
-								value="<?php echo esc_attr( $et['max_per_day'] ?? '' ); ?>"
-								min="1" placeholder="&mdash;" class="small-text">
-						</div>
-						<div>
-							<label for="mwm-max-week"><?php esc_html_e( 'Max per Week', 'meet-with-me' ); ?></label>
-							<input type="number" id="mwm-max-week" name="max_per_week"
-								value="<?php echo esc_attr( $et['max_per_week'] ?? '' ); ?>"
-								min="1" placeholder="&mdash;" class="small-text">
-						</div>
+						<?php endif; ?>
 					</div>
-				</div>
-
-				<!-- Custom Questions -->
-				<div class="mwm-card">
-					<h2><?php esc_html_e( 'Questions for the Booker', 'meet-with-me' ); ?></h2>
-					<p class="description" style="margin-bottom:16px;">
-						<?php esc_html_e( 'Add questions that appear on the booking form for this meeting type. Drag to reorder, or use the up/down buttons.', 'meet-with-me' ); ?>
-					</p>
-
-					<div id="mwm-fields-list" class="mwm-fields-list">
-						<!-- Rows injected by JS from mwm_fields_json -->
-					</div>
-
-					<button type="button" id="mwm-add-field" class="button">
-						+ <?php esc_html_e( 'Add a Question', 'meet-with-me' ); ?>
-					</button>
-				</div>
+				<?php $card_close(); ?>
 
 			</div><!-- .mwm-edit-main -->
 
 			<!-- Sidebar -->
 			<div class="mwm-edit-sidebar">
 
-				<div class="mwm-card">
-					<h2><?php esc_html_e( 'Publish', 'meet-with-me' ); ?></h2>
+				<div class="mwm-card mwm-card--sticky" id="mwm-publish-card">
+					<h2><span class="mwm-card-drag-handle" title="<?php esc_attr_e( 'Drag to reorder', 'meet-with-me' ); ?>" aria-hidden="true">&#x2807;</span><?php esc_html_e( 'Publish', 'meet-with-me' ); ?></h2>
 
 					<div class="mwm-field-row">
 						<label class="mwm-toggle-label">
@@ -288,19 +426,21 @@ foreach ( $routing_fields as $routing_field ) {
 						<p class="description"><?php esc_html_e( 'Used on booking cards.', 'meet-with-me' ); ?></p>
 					</div>
 
+					<span id="mwm-autosave-status" class="mwm-autosave-status" role="status" aria-live="polite"></span>
+
 					<div class="mwm-sidebar-actions">
 						<button type="submit" name="mwm_save_event_type" class="button button-primary button-large">
 							<?php echo $is_new ? esc_html__( 'Create Meeting Type', 'meet-with-me' ) : esc_html__( 'Save Changes', 'meet-with-me' ); ?>
 						</button>
 						<a href="<?php echo esc_url( $list_url ); ?>" class="button button-large">
-							<?php esc_html_e( 'Cancel', 'meet-with-me' ); ?>
+							<?php esc_html_e( 'Back to list', 'meet-with-me' ); ?>
 						</a>
 					</div>
 				</div>
 
 				<?php if ( ! $is_new ) : ?>
-				<div class="mwm-card mwm-card--shortcodes">
-					<h2><?php esc_html_e( 'Shortcodes', 'meet-with-me' ); ?></h2>
+				<div class="mwm-card mwm-card--shortcodes" id="mwm-shortcodes-card">
+					<h2><span class="mwm-card-drag-handle" title="<?php esc_attr_e( 'Drag to reorder', 'meet-with-me' ); ?>" aria-hidden="true">&#x2807;</span><?php esc_html_e( 'Shortcodes', 'meet-with-me' ); ?></h2>
 					<p class="description"><?php esc_html_e( 'Copy and paste these into any page or widget.', 'meet-with-me' ); ?></p>
 
 					<div class="mwm-shortcode-copy">
@@ -313,6 +453,24 @@ foreach ( $routing_fields as $routing_field ) {
 					</div>
 				</div>
 				<?php endif; ?>
+
+				<div class="mwm-card mwm-preview-card" id="mwm-preview-card">
+					<h2>
+						<span class="mwm-card-drag-handle" title="<?php esc_attr_e( 'Drag to reorder', 'meet-with-me' ); ?>" aria-hidden="true">&#x2807;</span>
+						<?php esc_html_e( 'Preview', 'meet-with-me' ); ?>
+						<button type="button" class="button-link mwm-preview-move" id="mwm-preview-move"
+							title="<?php esc_attr_e( 'Move preview to the main column or back to the sidebar', 'meet-with-me' ); ?>">
+							&#8661; <span class="screen-reader-text"><?php esc_html_e( 'Move preview', 'meet-with-me' ); ?></span>
+						</button>
+					</h2>
+					<div class="mwm-preview-filters" role="group" aria-label="<?php esc_attr_e( 'Preview meeting format', 'meet-with-me' ); ?>">
+						<button type="button" class="mwm-preview-filter is-active" data-preview-format="all"><?php esc_html_e( 'All', 'meet-with-me' ); ?></button>
+						<button type="button" class="mwm-preview-filter" data-preview-format="online"><?php esc_html_e( 'Online', 'meet-with-me' ); ?></button>
+						<button type="button" class="mwm-preview-filter" data-preview-format="in_person"><?php esc_html_e( 'In person', 'meet-with-me' ); ?></button>
+					</div>
+					<div id="mwm-live-preview" class="mwm-live-preview" aria-hidden="true"></div>
+					<p class="description"><?php esc_html_e( 'Live preview — updates as you edit. Not clickable.', 'meet-with-me' ); ?></p>
+				</div>
 
 			</div><!-- .mwm-edit-sidebar -->
 
@@ -340,6 +498,17 @@ foreach ( $routing_fields as $routing_field ) {
 				<input type="checkbox" class="mwm-fl-required">
 				<?php esc_html_e( 'Required', 'meet-with-me' ); ?>
 			</label>
+			<span class="mwm-fl-display-for" data-display-for-wrap>
+				<span class="screen-reader-text"><?php esc_html_e( 'Display this question for:', 'meet-with-me' ); ?></span>
+				<label class="mwm-display-chip" data-mwm-display-chip="online">
+					<input type="checkbox" class="mwm-fl-show-online">
+					<span><?php esc_html_e( 'Online', 'meet-with-me' ); ?></span>
+				</label>
+				<label class="mwm-display-chip" data-mwm-display-chip="in_person">
+					<input type="checkbox" class="mwm-fl-show-in-person">
+					<span><?php esc_html_e( 'In person', 'meet-with-me' ); ?></span>
+				</label>
+			</span>
 			<button type="button" class="mwm-field-row-up button-link" aria-label="<?php esc_attr_e( 'Move question up', 'meet-with-me' ); ?>" title="<?php esc_attr_e( 'Move question up', 'meet-with-me' ); ?>">&#9650;</button>
 			<button type="button" class="mwm-field-row-down button-link" aria-label="<?php esc_attr_e( 'Move question down', 'meet-with-me' ); ?>" title="<?php esc_attr_e( 'Move question down', 'meet-with-me' ); ?>">&#9660;</button>
 			<button type="button" class="mwm-fl-remove button-link-delete" aria-label="<?php esc_attr_e( 'Remove question', 'meet-with-me' ); ?>" title="<?php esc_attr_e( 'Remove question', 'meet-with-me' ); ?>">&#x2715;</button>
@@ -350,6 +519,16 @@ foreach ( $routing_fields as $routing_field ) {
 				placeholder="<?php esc_attr_e( 'Placeholder text (optional)', 'meet-with-me' ); ?>">
 		</div>
 		<div class="mwm-field-row-options" style="display:none;">
+			<div class="mwm-options-config">
+				<label>
+					<span class="screen-reader-text"><?php esc_html_e( 'Option layout', 'meet-with-me' ); ?></span>
+					<select class="mwm-fl-layout" aria-label="<?php esc_attr_e( 'Option layout', 'meet-with-me' ); ?>">
+						<option value="stacked"><?php esc_html_e( 'Stacked', 'meet-with-me' ); ?></option>
+						<option value="inline"><?php esc_html_e( 'Inline', 'meet-with-me' ); ?></option>
+						<option value="columns"><?php esc_html_e( 'Columns', 'meet-with-me' ); ?></option>
+					</select>
+				</label>
+			</div>
 			<div class="mwm-options-list"></div>
 			<button type="button" class="mwm-fl-add-option button-link">+ <?php esc_html_e( 'Add option', 'meet-with-me' ); ?></button>
 		</div>

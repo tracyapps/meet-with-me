@@ -15,6 +15,10 @@ class MWM_Admin {
 		add_action( 'admin_notices', array( $this, 'maybe_show_zoom_error_notice' ) );
 		add_action( 'admin_init', array( $this, 'maybe_dismiss_zoom_error' ) );
 		add_action( 'wp_ajax_mwm_test_zoom', array( $this, 'ajax_test_zoom' ) );
+		// Autosave is reached via admin-ajax, outside page routing, so the
+		// controller class must be loaded before the hook fires.
+		require_once MWM_PLUGIN_DIR . 'admin/class-mwm-admin-event-types.php';
+		add_action( 'wp_ajax_mwm_autosave_event_type', array( 'MWM_Admin_Event_Types', 'ajax_save' ) );
 	}
 
 	public function register_menus(): void {
@@ -178,6 +182,13 @@ class MWM_Admin {
 			MWM_VERSION
 		);
 
+		// The meeting-type editor renders a live preview of the booking form,
+		// which reuses the public classes — pull in the public stylesheet there.
+		$screen_action = sanitize_key( wp_unslash( $_GET['action'] ?? '' ) );
+		if ( str_contains( $hook, 'mwm-event-types' ) && in_array( $screen_action, array( 'edit', 'new' ), true ) ) {
+			wp_enqueue_style( 'meet-with-me' );
+		}
+
 		// WP color pickers are only needed on the Style tab.
 		$tab          = sanitize_key( wp_unslash( $_GET['tab'] ?? '' ) );
 		$is_style_tab = str_contains( $hook, 'mwm-settings' ) && $tab === 'style';
@@ -205,27 +216,42 @@ class MWM_Admin {
 				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
 				'nonce'   => wp_create_nonce( 'mwm_admin' ),
 				'strings' => array(
-					'areYouSure'       => __( 'Are you sure?', 'meet-with-me' ),
-					'copied'           => __( 'Copied!', 'meet-with-me' ),
-					'copiedAnnounce'   => __( 'Copied to clipboard.', 'meet-with-me' ),
-					'copyFallback'     => __( 'Text selected — press Ctrl/Cmd+C to copy.', 'meet-with-me' ),
-					'loading'          => __( 'Loading…', 'meet-with-me' ),
-					'refreshCalendars' => __( 'Refresh My Calendars', 'meet-with-me' ),
-					'calsFailed'       => __( 'Could not load calendars.', 'meet-with-me' ),
-					'requestFailed'    => __( 'Request failed. Please try again.', 'meet-with-me' ),
-					'noCals'           => __( 'No calendars were returned from Google.', 'meet-with-me' ),
-					'readOnly'         => __( 'Read only', 'meet-with-me' ),
-					'primarySuffix'    => __( '(primary)', 'meet-with-me' ),
-					'noWriteBack'      => __( 'Do not create Google Calendar events', 'meet-with-me' ),
-					'selectRouting'    => __( 'Select a routing field above to map specific answers to connected providers.', 'meet-with-me' ),
-					'noRouting'        => __( 'No conditional routing', 'meet-with-me' ),
-					'useDefault'       => __( 'Use default provider', 'meet-with-me' ),
-					'optionText'       => __( 'Option text', 'meet-with-me' ),
-					'removeOption'     => __( 'Remove option', 'meet-with-me' ),
-					'moveUp'           => __( 'Move question up', 'meet-with-me' ),
-					'moveDown'         => __( 'Move question down', 'meet-with-me' ),
-					'testing'          => __( 'Testing…', 'meet-with-me' ),
-					'testConnection'   => __( 'Test Connection', 'meet-with-me' ),
+					'areYouSure'         => __( 'Are you sure?', 'meet-with-me' ),
+					'copied'             => __( 'Copied!', 'meet-with-me' ),
+					'copiedAnnounce'     => __( 'Copied to clipboard.', 'meet-with-me' ),
+					'copyFallback'       => __( 'Text selected — press Ctrl/Cmd+C to copy.', 'meet-with-me' ),
+					'loading'            => __( 'Loading…', 'meet-with-me' ),
+					'refreshCalendars'   => __( 'Refresh My Calendars', 'meet-with-me' ),
+					'calsFailed'         => __( 'Could not load calendars.', 'meet-with-me' ),
+					'requestFailed'      => __( 'Request failed. Please try again.', 'meet-with-me' ),
+					'noCals'             => __( 'No calendars were returned from Google.', 'meet-with-me' ),
+					'readOnly'           => __( 'Read only', 'meet-with-me' ),
+					'primarySuffix'      => __( '(primary)', 'meet-with-me' ),
+					'noWriteBack'        => __( 'Do not create Google Calendar events', 'meet-with-me' ),
+					'selectRouting'      => __( 'Select a routing field above to map specific answers to connected providers.', 'meet-with-me' ),
+					'noRouting'          => __( 'No conditional routing', 'meet-with-me' ),
+					'useDefault'         => __( 'Use default provider', 'meet-with-me' ),
+					'optionText'         => __( 'Option text', 'meet-with-me' ),
+					'removeOption'       => __( 'Remove option', 'meet-with-me' ),
+					'moveUp'             => __( 'Move question up', 'meet-with-me' ),
+					'moveDown'           => __( 'Move question down', 'meet-with-me' ),
+					'testing'            => __( 'Testing…', 'meet-with-me' ),
+					'testConnection'     => __( 'Test Connection', 'meet-with-me' ),
+					'autosaving'         => __( 'Saving…', 'meet-with-me' ),
+					/* translators: %s = time of day */
+					'savedAt'            => __( 'Saved %s', 'meet-with-me' ),
+					'autosaveError'      => __( 'Save failed — click to retry', 'meet-with-me' ),
+					'saveChanges'        => __( 'Save Changes', 'meet-with-me' ),
+					'optionMoveUp'       => __( 'Move option up', 'meet-with-me' ),
+					'optionMoveDown'     => __( 'Move option down', 'meet-with-me' ),
+					'dragReorder'        => __( 'Drag to reorder', 'meet-with-me' ),
+					'previewUntitled'    => __( 'Untitled meeting type', 'meet-with-me' ),
+					'previewNoQuestions' => __( 'No questions yet — add one to see it here.', 'meet-with-me' ),
+					/* translators: standard wizard strings reused by the editor preview */
+					'name'               => __( 'Name', 'meet-with-me' ),
+					'email'              => __( 'Email', 'meet-with-me' ),
+					'stepDetails'        => __( 'Your details', 'meet-with-me' ),
+					'minShort'           => __( 'min', 'meet-with-me' ),
 				),
 			)
 		);
@@ -288,7 +314,7 @@ class MWM_Admin {
 					'id'      => 'mwm-help-settings',
 					'title'   => __( 'Settings', 'meet-with-me' ),
 					'content' =>
-						'<p>' . esc_html__( 'General sets your name, notification email, timezone, and booking windows. Availability controls your weekly hours, date overrides, and days off.', 'meet-with-me' ) . '</p>' .
+						'<p>' . esc_html__( 'General sets your name, notification email, timezone, and booking windows. Default Availability controls your weekly hours, date overrides, and days off. Meeting types can override their weekly hours.', 'meet-with-me' ) . '</p>' .
 						'<p>' . esc_html__( 'Google Calendar and Online Meetings connect external services. Style controls the front-end appearance. Email Templates lets you customise every notification.', 'meet-with-me' ) . '</p>' .
 						'<p>' . sprintf(
 							/* translators: %s = link to the Help & Setup tab */

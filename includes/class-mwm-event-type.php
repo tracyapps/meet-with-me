@@ -17,10 +17,18 @@ if ( ! defined( 'ABSPATH' ) ) {
  *     "placeholder": "",
  *     "required": true,
  *     "options": ["Coffee shop", "My office"],
+ *     "layout": "stacked",     // stacked | inline | columns (radio/checkbox only)
+ *     "show_online": true,     // display-for toggles, only meaningful when
+ *     "show_in_person": true,  //   meeting_type is "both"
  *     "order": 0
  *   },
  *   ...
  * ]
+ *
+ * The `availability_override` column stores a per-type weekly schedule that
+ * replaces the global weekly rules for this type (global date overrides and
+ * days off still apply): {"weekly":{"1":{"enabled":true,"start":"09:00","end":"17:00"},...}}
+ * NULL/empty = use the default (global) schedule.
  */
 class MWM_Event_Type {
 
@@ -173,6 +181,8 @@ class MWM_Event_Type {
 		$row['fields']                = ! empty( $row['fields'] ) ? json_decode( $row['fields'], true ) : array();
 		$row['online_provider_rules'] = ! empty( $row['online_provider_rules'] )
 			? json_decode( $row['online_provider_rules'], true ) : array();
+		$row['availability_override'] = ! empty( $row['availability_override'] )
+			? json_decode( $row['availability_override'], true ) : null;
 		return $row;
 	}
 
@@ -228,6 +238,9 @@ class MWM_Event_Type {
 		if ( isset( $data['fields'] ) ) {
 			$clean['fields'] = self::sanitize_fields( $data['fields'] );
 		}
+		if ( array_key_exists( 'availability_override', $data ) ) {
+			$clean['availability_override'] = self::sanitize_availability_override( $data['availability_override'] );
+		}
 		if ( isset( $data['is_active'] ) ) {
 			$clean['is_active'] = (int) (bool) $data['is_active'];
 		}
@@ -267,19 +280,94 @@ class MWM_Event_Type {
 			}
 
 			$clean[] = array(
-				'id'          => sanitize_key( $field['id'] ?? uniqid( 'f', false ) ),
-				'label'       => sanitize_text_field( $field['label'] ),
-				'type'        => $type,
-				'placeholder' => sanitize_text_field( $field['placeholder'] ?? '' ),
-				'required'    => (bool) ( $field['required'] ?? false ),
-				'options'     => $options,
-				'order'       => (int) ( $field['order'] ?? $i ),
+				'id'             => sanitize_key( $field['id'] ?? uniqid( 'f', false ) ),
+				'label'          => sanitize_text_field( $field['label'] ),
+				'type'           => $type,
+				'placeholder'    => sanitize_text_field( $field['placeholder'] ?? '' ),
+				'required'       => (bool) ( $field['required'] ?? false ),
+				'options'        => $options,
+				'layout'         => in_array( $field['layout'] ?? '', array( 'stacked', 'inline', 'columns' ), true )
+					? $field['layout'] : 'stacked',
+				'show_online'    => ! isset( $field['show_online'] ) || (bool) $field['show_online'],
+				'show_in_person' => ! isset( $field['show_in_person'] ) || (bool) $field['show_in_person'],
+				'order'          => (int) ( $field['order'] ?? $i ),
 			);
 		}
 
 		usort( $clean, fn( $a, $b ) => $a['order'] <=> $b['order'] );
 
 		return wp_json_encode( $clean );
+	}
+
+	/**
+	 * Sanitize the per-type availability override JSON before storing.
+	 *
+	 * Expected shape: {"weekly":{"<0-6>":{"enabled":bool,"start":"HH:MM","end":"HH:MM"}}}
+	 * where 0=Sunday…6=Saturday. Days with enabled=false are kept (they mean
+	 * "closed on this day"). Anything unparseable or empty becomes null =
+	 * use the default (global) schedule.
+	 *
+	 * @param mixed $input JSON string or already-decoded array.
+	 * @return string|null JSON string, or null when the type uses defaults.
+	 */
+	private static function sanitize_availability_override( mixed $input ): ?string {
+		if ( is_string( $input ) ) {
+			$input = json_decode( wp_unslash( $input ), true );
+		}
+		if ( ! is_array( $input ) || ! is_array( $input['weekly'] ?? null ) ) {
+			return null;
+		}
+
+		$weekly = array();
+		foreach ( $input['weekly'] as $day => $day_data ) {
+			$dow = (int) $day;
+			if ( $dow < 0 || $dow > 6 || ! is_array( $day_data ) ) {
+				continue;
+			}
+			$enabled = ! empty( $day_data['enabled'] );
+			$start   = self::valid_time( $day_data['start'] ?? '' ) ? $day_data['start'] : '09:00';
+			$end     = self::valid_time( $day_data['end'] ?? '' ) ? $day_data['end'] : '17:00';
+
+			$weekly[ $dow ] = array(
+				'enabled' => $enabled,
+				'start'   => $start,
+				'end'     => $end,
+			);
+		}
+
+		if ( empty( $weekly ) ) {
+			return null;
+		}
+
+		return wp_json_encode( array( 'weekly' => $weekly ) );
+	}
+
+	/**
+	 * Whether a value is a valid HH:MM time string.
+	 */
+	private static function valid_time( mixed $time ): bool {
+		return is_string( $time ) && preg_match( '/^([01]\d|2[0-3]):[0-5]\d$/', $time ) === 1;
+	}
+
+	/**
+	 * The questions visible to a booker for a given meeting format.
+	 *
+	 * The display-for flags (show_online / show_in_person) only gate questions
+	 * when the event type lets the booker choose a format; online-only and
+	 * in-person-only types show every question.
+	 *
+	 * @param array[] $fields        Parsed fields array.
+	 * @param string  $meeting_type  'online' | 'in_person' | 'both'.
+	 * @return array[] Filtered fields (input order preserved).
+	 */
+	public static function visible_fields( array $fields, string $meeting_type ): array {
+		if ( 'online' === $meeting_type ) {
+			return array_values( array_filter( $fields, fn( $f ) => false !== ( $f['show_online'] ?? true ) ) );
+		}
+		if ( 'in_person' === $meeting_type ) {
+			return array_values( array_filter( $fields, fn( $f ) => false !== ( $f['show_in_person'] ?? true ) ) );
+		}
+		return $fields;
 	}
 
 	/**

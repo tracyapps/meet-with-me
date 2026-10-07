@@ -712,3 +712,9 @@ ul.mwm-slots {
     .mwm-cal__picker-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .mwm-cal__nav-main { gap: 8px; }
 }
+
+/* Question option layouts (per-question "layout" setting) */
+.mwm-field-opts { display: flex; flex-direction: column; gap: 8px; }
+.mwm-field-opts.mwm-opts--inline { flex-direction: row; flex-wrap: wrap; gap: 8px 18px; }
+.mwm-field-opts.mwm-opts--columns { flex-direction: row; flex-wrap: wrap; gap: 8px 24px; }
+.mwm-field-opts.mwm-opts--columns .mwm-radio-label { flex: 0 0 40%; }
