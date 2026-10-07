@@ -29,6 +29,7 @@ class MWM_Public {
 		add_action( 'wp_enqueue_scripts', array( $this, 'maybe_enqueue_assets' ) );
 		add_action( 'wp_footer', array( $this, 'render_modal' ) );
 		add_action( 'template_redirect', array( $this, 'maybe_render_manage_page' ) );
+		add_action( 'template_redirect', array( $this, 'maybe_serve_ics' ) );
 		add_shortcode( 'mwm_booking_form', array( $this, 'shortcode_booking_form' ) );
 		add_shortcode( 'mwm_button', array( $this, 'shortcode_button' ) );
 		add_shortcode( 'mwm_cards', array( $this, 'shortcode_cards' ) );
@@ -105,6 +106,69 @@ class MWM_Public {
 		echo '</div>';
 		get_footer();
 		exit;
+	}
+
+	/**
+	 * Intercept ?mwm_ics=<token> requests and serve the booking as an .ics
+	 * download (confirmation screen "Download .ics" button).
+	 */
+	public function maybe_serve_ics(): void {
+		$token = isset( $_GET['mwm_ics'] ) ? sanitize_text_field( wp_unslash( $_GET['mwm_ics'] ) ) : '';
+		if ( ! $token ) {
+			return;
+		}
+
+		$result = self::ics_response( $token );
+		if ( is_wp_error( $result ) ) {
+			wp_die(
+				esc_html( $result->get_error_message() ),
+				'',
+				array( 'response' => 404 )
+			);
+		}
+
+		// The URL embeds a bearer token: never cache, never index, never refer.
+		nocache_headers();
+		header( 'Cache-Control: private, no-store, no-cache, must-revalidate, max-age=0', true );
+		header( 'Referrer-Policy: no-referrer', true );
+		header( 'X-Robots-Tag: noindex, nofollow, noarchive', true );
+		header( 'Content-Type: text/calendar; charset=' . get_option( 'blog_charset' ), true );
+		header( 'Content-Disposition: attachment; filename="' . $result['filename'] . '"', true );
+		header( 'Content-Length: ' . strlen( $result['body'] ), true );
+
+		echo $result['body']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- ICS body from MWM_ICS::generate, already escaped for the iCalendar format
+		exit;
+	}
+
+	/**
+	 * Build the ICS payload for a booking's calendar-download link.
+	 *
+	 * Testable core of maybe_serve_ics(): validates the token shape, resolves
+	 * the booking (confirmed bookings only — cancelled/rescheduled rows would
+	 * hand out a stale event), and reuses the email-attachment generator.
+	 *
+	 * @param string $token Booking cancel token from the mwm_ics link.
+	 * @return array{body:string,filename:string}|WP_Error
+	 */
+	public static function ics_response( string $token ): array|WP_Error {
+		if ( ! preg_match( '/^[a-f0-9]{64}$/', $token ) ) {
+			return new WP_Error( 'mwm_ics_invalid_token', __( 'Invalid calendar link.', 'meet-with-me' ) );
+		}
+
+		$booking = MWM_Booking::get_by_token( $token, 'cancel' );
+		if ( ! $booking || 'confirmed' !== (string) $booking['status'] ) {
+			return new WP_Error( 'mwm_ics_not_found', __( 'Booking not found.', 'meet-with-me' ) );
+		}
+
+		$event_type = MWM_Event_Type::get( (int) $booking['event_type_id'] );
+		if ( ! $event_type ) {
+			return new WP_Error( 'mwm_ics_not_found', __( 'Booking not found.', 'meet-with-me' ) );
+		}
+
+		return array(
+			'body'     => MWM_ICS::generate( $booking, $event_type ),
+			'filename' => 'meet-with-me-booking-' . (int) $booking['id'] . '.ics',
+		);
 	}
 
 	/**
@@ -436,23 +500,23 @@ class MWM_Public {
 	 */
 	private function get_script_strings(): array {
 		return array(
-			'loading'            => __( 'Loading…', 'meet-with-me' ),
-			'requestFailed'      => __( 'Request failed. Please try again.', 'meet-with-me' ),
-			'tryAgain'           => __( 'Try Again', 'meet-with-me' ),
-			'back'               => __( '← Back', 'meet-with-me' ),
-			'stepDate'           => __( 'Choose a date', 'meet-with-me' ),
-			'stepTime'           => __( 'Choose a time', 'meet-with-me' ),
-			'stepDetails'        => __( 'Your details', 'meet-with-me' ),
+			'loading'             => __( 'Loading…', 'meet-with-me' ),
+			'requestFailed'       => __( 'Request failed. Please try again.', 'meet-with-me' ),
+			'tryAgain'            => __( 'Try Again', 'meet-with-me' ),
+			'back'                => __( '← Back', 'meet-with-me' ),
+			'stepDate'            => __( 'Choose a date', 'meet-with-me' ),
+			'stepTime'            => __( 'Choose a time', 'meet-with-me' ),
+			'stepDetails'         => __( 'Your details', 'meet-with-me' ),
 			/* translators: 1: step number, 2: step title */
-			'stepAnnounce'       => __( 'Step %1$s of 3: %2$s', 'meet-with-me' ),
-			'noMeetingTypes'     => __( 'No meeting types available.', 'meet-with-me' ),
-			'chooseTypeTitle'    => __( 'What type of meeting?', 'meet-with-me' ),
-			'minShort'           => __( 'min', 'meet-with-me' ),
-			'online'             => __( 'Online', 'meet-with-me' ),
-			'inPerson'           => __( 'In person', 'meet-with-me' ),
-			'onlineOrInPerson'   => __( 'Online or in person', 'meet-with-me' ),
-			'reschedule'         => __( 'Reschedule', 'meet-with-me' ),
-			'months'             => array(
+			'stepAnnounce'        => __( 'Step %1$s of 3: %2$s', 'meet-with-me' ),
+			'noMeetingTypes'      => __( 'No meeting types available.', 'meet-with-me' ),
+			'chooseTypeTitle'     => __( 'What type of meeting?', 'meet-with-me' ),
+			'minShort'            => __( 'min', 'meet-with-me' ),
+			'online'              => __( 'Online', 'meet-with-me' ),
+			'inPerson'            => __( 'In person', 'meet-with-me' ),
+			'onlineOrInPerson'    => __( 'Online or in person', 'meet-with-me' ),
+			'reschedule'          => __( 'Reschedule', 'meet-with-me' ),
+			'months'              => array(
 				__( 'January', 'meet-with-me' ),
 				__( 'February', 'meet-with-me' ),
 				__( 'March', 'meet-with-me' ),
@@ -466,7 +530,7 @@ class MWM_Public {
 				__( 'November', 'meet-with-me' ),
 				__( 'December', 'meet-with-me' ),
 			),
-			'dayHeaders'         => array(
+			'dayHeaders'          => array(
 				__( 'Mo', 'meet-with-me' ),
 				__( 'Tu', 'meet-with-me' ),
 				__( 'We', 'meet-with-me' ),
@@ -475,70 +539,81 @@ class MWM_Public {
 				__( 'Sa', 'meet-with-me' ),
 				__( 'Su', 'meet-with-me' ),
 			),
-			'prevMonth'          => __( 'Previous month', 'meet-with-me' ),
-			'nextMonth'          => __( 'Next month', 'meet-with-me' ),
-			'today'              => __( 'Today', 'meet-with-me' ),
-			'backToToday'        => __( 'Back to Today', 'meet-with-me' ),
-			'chooseMonth'        => __( 'Choose a month', 'meet-with-me' ),
-			'yearLabel'          => __( 'Year', 'meet-with-me' ),
-			'pickerNote'         => __( 'Choose a month in the active booking window, or use the arrows to preview months outside it.', 'meet-with-me' ),
+			'prevMonth'           => __( 'Previous month', 'meet-with-me' ),
+			'nextMonth'           => __( 'Next month', 'meet-with-me' ),
+			'today'               => __( 'Today', 'meet-with-me' ),
+			'backToToday'         => __( 'Back to Today', 'meet-with-me' ),
+			'chooseMonth'         => __( 'Choose a month', 'meet-with-me' ),
+			'yearLabel'           => __( 'Year', 'meet-with-me' ),
+			'pickerNote'          => __( 'Choose a month in the active booking window, or use the arrows to preview months outside it.', 'meet-with-me' ),
 			/* translators: %s = date */
-			'pastMonth'          => __( 'You’re viewing a past month. New meetings can only be booked from %s onward.', 'meet-with-me' ),
+			'pastMonth'           => __( 'You’re viewing a past month. New meetings can only be booked from %s onward.', 'meet-with-me' ),
 			/* translators: %s = date */
-			'futureMonth'        => __( 'You’re viewing beyond the current booking window. New meetings can be booked through %s.', 'meet-with-me' ),
+			'futureMonth'         => __( 'You’re viewing beyond the current booking window. New meetings can be booked through %s.', 'meet-with-me' ),
 			/* translators: 1: month name, 2: year */
-			'noDatesInMonth'     => __( 'No bookable dates are available in %1$s %2$s. Try another month.', 'meet-with-me' ),
-			'unavailable'        => __( 'unavailable', 'meet-with-me' ),
-			'noTimes'            => __( 'No times available on this day. Please go back and pick another date.', 'meet-with-me' ),
-			'availableTimes'     => __( 'Available Times', 'meet-with-me' ),
-			'loadingDates'       => __( 'Loading available dates…', 'meet-with-me' ),
-			'loadingTimes'       => __( 'Loading available times…', 'meet-with-me' ),
+			'noDatesInMonth'      => __( 'No bookable dates are available in %1$s %2$s. Try another month.', 'meet-with-me' ),
+			'unavailable'         => __( 'unavailable', 'meet-with-me' ),
+			'noTimes'             => __( 'No times available on this day. Please go back and pick another date.', 'meet-with-me' ),
+			'availableTimes'      => __( 'Available Times', 'meet-with-me' ),
+			'loadingDates'        => __( 'Loading available dates…', 'meet-with-me' ),
+			'loadingTimes'        => __( 'Loading available times…', 'meet-with-me' ),
 			/* translators: %s = number of dates */
-			'datesAvailable'     => __( '%s dates available.', 'meet-with-me' ),
+			'datesAvailable'      => __( '%s dates available.', 'meet-with-me' ),
 			/* translators: %s = number of time slots */
-			'timesAvailable'     => __( '%s times available.', 'meet-with-me' ),
-			'name'               => __( 'Name', 'meet-with-me' ),
-			'namePlaceholder'    => __( 'Your full name', 'meet-with-me' ),
-			'email'              => __( 'Email', 'meet-with-me' ),
-			'emailPlaceholder'   => __( 'you@example.com', 'meet-with-me' ),
-			'phone'              => __( 'Phone', 'meet-with-me' ),
-			'optional'           => __( '(optional)', 'meet-with-me' ),
-			'howToMeet'          => __( 'How would you like to meet?', 'meet-with-me' ),
-			'anythingElse'       => __( 'Anything else?', 'meet-with-me' ),
-			'notesPlaceholder'   => __( 'Notes or context for our meeting…', 'meet-with-me' ),
-			'confirmBooking'     => __( 'Confirm Booking', 'meet-with-me' ),
-			'confirming'         => __( 'Confirming…', 'meet-with-me' ),
-			'choosePlaceholder'  => __( '— Choose —', 'meet-with-me' ),
-			'invalidNameEmail'   => __( 'Please enter a valid name and email address.', 'meet-with-me' ),
-			'chooseMeetType'     => __( 'Please choose how you would like to meet.', 'meet-with-me' ),
+			'timesAvailable'      => __( '%s times available.', 'meet-with-me' ),
+			'name'                => __( 'Name', 'meet-with-me' ),
+			'namePlaceholder'     => __( 'Your full name', 'meet-with-me' ),
+			'email'               => __( 'Email', 'meet-with-me' ),
+			'emailPlaceholder'    => __( 'you@example.com', 'meet-with-me' ),
+			'phone'               => __( 'Phone', 'meet-with-me' ),
+			'optional'            => __( '(optional)', 'meet-with-me' ),
+			'howToMeet'           => __( 'How would you like to meet?', 'meet-with-me' ),
+			'anythingElse'        => __( 'Anything else?', 'meet-with-me' ),
+			'notesPlaceholder'    => __( 'Notes or context for our meeting…', 'meet-with-me' ),
+			'confirmBooking'      => __( 'Confirm Booking', 'meet-with-me' ),
+			'confirming'          => __( 'Confirming…', 'meet-with-me' ),
+			'choosePlaceholder'   => __( '— Choose —', 'meet-with-me' ),
+			'invalidNameEmail'    => __( 'Please enter a valid name and email address.', 'meet-with-me' ),
+			'chooseMeetType'      => __( 'Please choose how you would like to meet.', 'meet-with-me' ),
 			/* translators: %s = question label */
-			'pleaseAnswer'       => __( 'Please answer: %s', 'meet-with-me' ),
-			'genericError'       => __( 'Something went wrong. Please try again.', 'meet-with-me' ),
-			'booked'             => __( 'You’re booked!', 'meet-with-me' ),
+			'pleaseAnswer'        => __( 'Please answer: %s', 'meet-with-me' ),
+			'genericError'        => __( 'Something went wrong. Please try again.', 'meet-with-me' ),
+			'booked'              => __( 'You’re booked!', 'meet-with-me' ),
 			/* translators: %s = email address */
-			'confirmationSent'   => __( 'A confirmation email is heading to %s.', 'meet-with-me' ),
-			'openMeetingLink'    => __( 'Open meeting link', 'meet-with-me' ),
-			'needManage'         => __( 'Need to cancel or reschedule?', 'meet-with-me' ),
-			'manageBooking'      => __( 'Manage Booking', 'meet-with-me' ),
-			'cancelThis'         => __( 'Cancel this booking', 'meet-with-me' ),
-			'cancelConfirm'      => __( 'Cancel this booking? This cannot be undone.', 'meet-with-me' ),
-			'yesCancel'          => __( 'Yes, Cancel It', 'meet-with-me' ),
-			'goBack'             => __( 'Go Back', 'meet-with-me' ),
-			'cancelling'         => __( 'Cancelling…', 'meet-with-me' ),
-			'bookingCancelled'   => __( 'Booking cancelled', 'meet-with-me' ),
+			'confirmationSent'    => __( 'A confirmation email is heading to %s.', 'meet-with-me' ),
+			'openMeetingLink'     => __( 'Open meeting link', 'meet-with-me' ),
+			'needManage'          => __( 'Need to cancel or reschedule?', 'meet-with-me' ),
+			'manageBooking'       => __( 'Manage Booking', 'meet-with-me' ),
+			'bookingProgress'     => __( 'Booking progress', 'meet-with-me' ),
+			'summarySelected'     => __( 'Your selection', 'meet-with-me' ),
+			'summaryPickTime'     => __( 'Pick a time below', 'meet-with-me' ),
+			'addToGoogleCalendar' => __( 'Add to Google Calendar', 'meet-with-me' ),
+			'downloadIcs'         => __( 'Download .ics', 'meet-with-me' ),
+			'copyDetails'         => __( 'Copy details', 'meet-with-me' ),
+			'detailsCopied'       => __( 'Booking details copied.', 'meet-with-me' ),
+			'copyFailed'          => __( 'Could not copy to clipboard.', 'meet-with-me' ),
+			'shareBooking'        => __( 'Share', 'meet-with-me' ),
+			/* translators: %s = manage booking URL */
+			'manageAt'            => __( 'Manage: %s', 'meet-with-me' ),
+			'cancelThis'          => __( 'Cancel this booking', 'meet-with-me' ),
+			'cancelConfirm'       => __( 'Cancel this booking? This cannot be undone.', 'meet-with-me' ),
+			'yesCancel'           => __( 'Yes, Cancel It', 'meet-with-me' ),
+			'goBack'              => __( 'Go Back', 'meet-with-me' ),
+			'cancelling'          => __( 'Cancelling…', 'meet-with-me' ),
+			'bookingCancelled'    => __( 'Booking cancelled', 'meet-with-me' ),
 			/* translators: 1: meeting name, 2: date/time */
-			'cancelledBody'      => __( 'Your %1$s on %2$s has been cancelled.', 'meet-with-me' ),
-			'bookNewTime'        => __( 'Book a New Time', 'meet-with-me' ),
-			'backToBooking'      => __( '← Back to booking', 'meet-with-me' ),
-			'chooseNewTime'      => __( 'Choose a new time', 'meet-with-me' ),
+			'cancelledBody'       => __( 'Your %1$s on %2$s has been cancelled.', 'meet-with-me' ),
+			'bookNewTime'         => __( 'Book a New Time', 'meet-with-me' ),
+			'backToBooking'       => __( '← Back to booking', 'meet-with-me' ),
+			'chooseNewTime'       => __( 'Choose a new time', 'meet-with-me' ),
 			/* translators: %s = time slot label */
-			'newTime'            => __( 'New time: %s', 'meet-with-me' ),
-			'confirmNewTime'     => __( 'Confirm New Time', 'meet-with-me' ),
-			'rescheduling'       => __( 'Rescheduling…', 'meet-with-me' ),
-			'bookingRescheduled' => __( 'Booking rescheduled!', 'meet-with-me' ),
+			'newTime'             => __( 'New time: %s', 'meet-with-me' ),
+			'confirmNewTime'      => __( 'Confirm New Time', 'meet-with-me' ),
+			'rescheduling'        => __( 'Rescheduling…', 'meet-with-me' ),
+			'bookingRescheduled'  => __( 'Booking rescheduled!', 'meet-with-me' ),
 			/* translators: 1: meeting name, 2: date/time */
-			'rescheduledBody'    => __( 'Your %1$s is now scheduled for %2$s.', 'meet-with-me' ),
-			'confirmationOnWay'  => __( 'A confirmation email is on its way.', 'meet-with-me' ),
+			'rescheduledBody'     => __( 'Your %1$s is now scheduled for %2$s.', 'meet-with-me' ),
+			'confirmationOnWay'   => __( 'A confirmation email is on its way.', 'meet-with-me' ),
 		);
 	}
 

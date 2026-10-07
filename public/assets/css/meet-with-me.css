@@ -92,26 +92,125 @@ ul.mwm-slots {
     margin: 0 auto;
 }
 
-/* Header: back / progress / event type label */
-.mwm-wiz-header {
+/* Top bar: quiet back link + event-type label, above the stepper */
+.mwm-wiz-topbar {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 12px;
-    margin-bottom: 20px;
+    margin-bottom: 10px;
 }
 .mwm-wiz-back {
     background: none;
     border: none;
     cursor: pointer;
-    padding: 4px 0;
+    padding: 6px 0;
     white-space: nowrap;
-    font-size: 0.9em;
+    font-size: 0.85em;
+    opacity: var(--mwm-muted-opacity, 0.75);
 }
-.mwm-wiz-progress { flex: 1; min-width: 0; }
-.mwm-wiz-progress__label { font-size: 0.8em; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
-.mwm-wiz-progress__bar   { height: 4px; border-radius: 2px; background: var(--mwm-surface-muted, color-mix(in srgb, currentColor 10%, transparent)); overflow: hidden; }
-.mwm-wiz-progress__fill  { height: 100%; border-radius: 2px; background: var(--mwm-accent, currentColor); transition: width 0.3s ease; }
-.mwm-wiz-et-name         { font-size: 0.85em; white-space: nowrap; display: flex; align-items: center; gap: 6px; }
+.mwm-wiz-back:hover { opacity: 1; }
+.mwm-wiz-et {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85em;
+    opacity: var(--mwm-muted-opacity, 0.85);
+    white-space: nowrap;
+    min-width: 0;
+}
+.mwm-wiz-et__name { overflow: hidden; text-overflow: ellipsis; }
+
+/* Stepper: one dot per booking step (date / time / details), done steps
+   get a check; the active step carries the accent. */
+.mwm-stepper {
+    display: flex;
+    align-items: flex-start;
+    margin: 0 0 20px;
+    padding: 0;
+    list-style: none;
+}
+.mwm-stepper__step {
+    flex: 1;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    text-align: center;
+}
+.mwm-stepper__step + .mwm-stepper__step::before {
+    content: '';
+    position: absolute;
+    top: 13px;
+    left: calc(-50% + 16px);
+    width: calc(100% - 32px);
+    height: 2px;
+    background: var(--mwm-surface-muted, color-mix(in srgb, currentColor 12%, transparent));
+}
+.mwm-stepper__step--done + .mwm-stepper__step--done::before,
+.mwm-stepper__step--done + .mwm-stepper__step--current::before {
+    background: var(--mwm-accent, currentColor);
+}
+.mwm-stepper__dot {
+    position: relative;
+    z-index: 1;
+    width: 28px;
+    height: 28px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    border: 2px solid var(--mwm-border, currentColor);
+    opacity: 0.45;
+}
+.mwm-stepper__dot svg {
+    width: 14px;
+    height: 14px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.mwm-stepper__label { font-size: 0.75em; font-weight: 600; opacity: var(--mwm-muted-opacity, 0.6); }
+.mwm-stepper__step--current .mwm-stepper__dot {
+    border-color: var(--mwm-accent, currentColor);
+    color: var(--mwm-accent, currentColor);
+    opacity: 1;
+}
+.mwm-stepper__step--current .mwm-stepper__label { opacity: 1; }
+.mwm-stepper__step--done .mwm-stepper__dot {
+    background: var(--mwm-accent, currentColor);
+    border-color: var(--mwm-accent, currentColor);
+    color: var(--mwm-accent-contrast, #fff);
+    opacity: 1;
+}
+
+/* Persistent selection panel — appears the moment a day is picked and
+   stays in place through the details form and the confirmation. */
+.mwm-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    border: 1px solid var(--mwm-border, currentColor);
+    border-left: 4px solid var(--mwm-accent, currentColor);
+    border-radius: var(--mwm-radius-lg, 8px);
+    padding: calc(14px * var(--mwm-space, 1)) calc(16px * var(--mwm-space, 1));
+    margin-bottom: 20px;
+}
+.mwm-summary__type {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85em;
+    opacity: var(--mwm-muted-opacity, 0.75);
+}
+.mwm-summary__meta  { opacity: var(--mwm-muted-opacity, 0.7); }
+.mwm-summary__day   { font-size: 1.05em; font-weight: 600; }
+.mwm-summary__time  { font-size: 1.2em; font-weight: 700; }
+.mwm-summary__tz    { font-size: 0.65em; font-weight: 400; margin-left: 8px; opacity: var(--mwm-muted-opacity, 0.6); }
 
 /* Small color dot (inline) */
 .mwm-dot {
@@ -283,12 +382,42 @@ ul.mwm-slots {
 
 /* Step 5 — confirmation */
 .mwm-confirm            { text-align: center; padding: 8px 0; }
-.mwm-confirm__icon      { font-size: 2.5em; margin-bottom: 8px; }
+.mwm-confirm__burst     { position: relative; display: inline-block; margin-bottom: 8px; }
+.mwm-confirm__icon      { font-size: 2.5em; line-height: 1; }
 .mwm-confirm__title     { margin: 0 0 6px; font-size: 1.4em; }
 .mwm-confirm__sub       { margin: 0 0 20px; opacity: var(--mwm-muted-opacity, 0.75); }
-.mwm-confirm__details   { display: inline-flex; flex-direction: column; gap: 8px; text-align: left; margin-bottom: 24px; }
+.mwm-confirm__details   { display: inline-flex; flex-direction: column; gap: 8px; text-align: left; margin-bottom: 20px; }
 .mwm-confirm__row       { display: flex; gap: 10px; align-items: flex-start; }
+.mwm-confirm__actions   { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 0 0 24px; }
+.mwm-confirm__actions .mwm-btn-secondary { font-size: 0.9em; padding: 8px 16px; }
 .mwm-confirm__manage p  { margin: 0 0 8px; opacity: var(--mwm-muted-opacity, 0.7); font-size: 0.9em; }
+
+/* Sparkle burst: decorative four-point stars flung outward from the check
+   mark. Pure CSS, fires on insertion; prefers-reduced-motion disables it. */
+.mwm-confirm__sparkle {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 7px;
+    height: 7px;
+    margin: -3px 0 0 -3px;
+    background: var(--mwm-accent, currentColor);
+    clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+    opacity: 0;
+    animation: mwm-sparkle 0.9s ease-out forwards;
+}
+.mwm-confirm__sparkle:nth-child(3) { --mwm-r: 45deg;  animation-delay: 0.06s; }
+.mwm-confirm__sparkle:nth-child(4) { --mwm-r: 90deg;  animation-delay: 0.02s; }
+.mwm-confirm__sparkle:nth-child(5) { --mwm-r: 135deg; animation-delay: 0.08s; }
+.mwm-confirm__sparkle:nth-child(6) { --mwm-r: 180deg; animation-delay: 0.00s; }
+.mwm-confirm__sparkle:nth-child(7) { --mwm-r: 225deg; animation-delay: 0.07s; }
+.mwm-confirm__sparkle:nth-child(8) { --mwm-r: 270deg; animation-delay: 0.03s; }
+.mwm-confirm__sparkle:nth-child(9) { --mwm-r: 315deg; animation-delay: 0.05s; }
+@keyframes mwm-sparkle {
+    0%   { transform: rotate(var(--mwm-r, 0deg)) translateX(20px) scale(0.3); opacity: 0; }
+    35%  { opacity: 1; }
+    100% { transform: rotate(var(--mwm-r, 0deg)) translateX(48px) scale(1); opacity: 0; }
+}
 
 /* =====================================================================
    Loading / error
@@ -563,7 +692,7 @@ ul.mwm-slots {
 
 @media (prefers-reduced-motion: reduce) {
     .mwm-spinner { animation: none; }
-    .mwm-wiz-progress__fill { transition: none; }
+    .mwm-confirm__sparkle { animation: none; opacity: 0; }
 }
 
 /* =====================================================================
@@ -579,8 +708,7 @@ ul.mwm-slots {
 @media (max-width: 520px) {
     .mwm-modal__content { padding: 20px 16px; }
     .mwm-slots          { grid-template-columns: repeat(3, 1fr); }
-    .mwm-wiz-header     { flex-wrap: wrap; }
-    .mwm-wiz-et-name    { display: none; }
+    .mwm-stepper__label { display: none; }
     .mwm-cal__picker-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .mwm-cal__nav-main { gap: 8px; }
 }

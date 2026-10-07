@@ -4,7 +4,7 @@ Tags: booking, appointments, scheduling, calendar, zoom
 Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.3.2
+Stable tag: 0.4.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -93,6 +93,13 @@ Every confirmation email contains a private manage link. Bookers can cancel or p
 Uninstalling removes all plugin options, transients, and booking data — including on every site of a multisite network.
 
 == Changelog ==
+
+= 0.4.0 =
+* Booking wizard UX: a persistent "Your selection" panel now shows the event type, chosen day, and chosen time in a fixed, visually weighted spot from the moment a day is picked — all the way through the details form and the confirmation screen, so you can always double-check what you're booking before submitting.
+* Booking wizard UX: the header was rebuilt — a quiet back/event-type row on top and a distinct icon stepper (calendar, clock, form) with done/current/upcoming states replaces the thin progress bar.
+* Confirmation screen: new action row — Add to Google Calendar, Download .ics (token-gated download link), Copy details, and Share on supporting browsers; plus a celebratory sparkle burst (disabled under prefers-reduced-motion).
+* REST: booking confirmation payload now includes start/end UTC times and the .ics download URL.
+* Fixed: changing the accent color on the Booking Form, Button, or Cards block crashed the block preview on WordPress 7.x (deprecated ColorPicker props routed through a back-compat adapter that throws on change); the blocks now use the current `enableAlpha` API.
 
 = 0.3.2 =
 * Fixed: theme bullet markers and indents leaking into the booking wizard (time-slot list, any list inside plugin containers) — a scoped CSS guard now strips list styling from page-builder/theme `li` rules.

@@ -412,6 +412,7 @@ class MWM_REST {
 		// Build confirmation data for the frontend
 		$start_local = MWM_Booking::format_datetime( $start_utc, $tz, get_option( 'date_format' ) . ' \a\t ' . get_option( 'time_format' ) );
 		$manage_url  = add_query_arg( array( 'mwm_token' => $booking['cancel_token'] ), home_url( '/' ) );
+		$ics_url     = add_query_arg( array( 'mwm_ics' => $booking['cancel_token'] ), home_url( '/' ) );
 
 		return new WP_REST_Response(
 			array(
@@ -422,11 +423,14 @@ class MWM_REST {
 					'booker_email'       => $email,
 					'event_type_name'    => $event_type['name'],
 					'start_local'        => $start_local,
+					'start_utc'          => $booking['start_datetime'],
+					'end_utc'            => $booking['end_datetime'],
 					'timezone'           => $tz,
 					'meeting_type_label' => MWM_Booking::format_label( $meeting_type ),
 					'meeting_provider'   => MWM_Online_Meetings::get_provider_label( (string) ( $booking['meeting_provider'] ?? '' ) ),
 					'meeting_join_url'   => $booking['meeting_join_url'] ?? '',
 					'manage_url'         => $manage_url,
+					'ics_url'            => $ics_url,
 				),
 			),
 			201

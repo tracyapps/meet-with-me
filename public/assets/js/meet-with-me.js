@@ -218,7 +218,9 @@
             if (this.s.loading) return this._tplLoading();
             if (this.s.error)   return this._tplError(this.s.error);
             let out = '';
-            if (this.s.step > 1 && this.s.step < 5) out += this._tplHeader();
+            if (this.s.step > 1 && this.s.step < 5) out += this._tplTopbar();
+            if (this.s.step > 1) out += this._tplStepper();
+            if (this.s.step >= 3) out += this._tplSummary();
             switch (this.s.step) {
                 case 1: out += this._tplStep1(); break;
                 case 2: out += this._tplStep2(); break;
@@ -237,23 +239,57 @@
             return `<div class="mwm-error"><p>${this._e(msg)}</p><button class="mwm-btn-secondary" data-a="retry">${this._e(t('tryAgain', 'Try Again'))}</button></div>`;
         }
 
-        _tplHeader() {
-            const labels = {
-                2: t('stepDate', 'Choose a date'),
-                3: t('stepTime', 'Choose a time'),
-                4: t('stepDetails', 'Your details'),
-            };
-            const stepNum = this.s.step - 1;
-            const pct = Math.round((stepNum / 3) * 100);
+        // Quiet top bar: small back button + small event-type label.
+        _tplTopbar() {
             const showBack = !(this.s.step === 2 && this.presetSlug);
             return `
-<div class="mwm-wiz-header">
+<div class="mwm-wiz-topbar">
   ${showBack ? `<button class="mwm-wiz-back" data-a="back">${this._e(t('back', '← Back'))}</button>` : '<span></span>'}
-  <div class="mwm-wiz-progress">
-    <div class="mwm-wiz-progress__label">${this._e(labels[this.s.step])}</div>
-    <div class="mwm-wiz-progress__bar" aria-hidden="true"><div class="mwm-wiz-progress__fill" style="width:${pct}%"></div></div>
-  </div>
-  ${this.s.eventType ? `<div class="mwm-wiz-et-name"><span class="mwm-dot" style="background:${this._e(this.s.eventType.color)}"></span>${this._e(this.s.eventType.name)}</div>` : '<span></span>'}
+  ${this.s.eventType ? `<div class="mwm-wiz-et"><span class="mwm-dot" style="background:${this._e(this.s.eventType.color)}"></span><span class="mwm-wiz-et__name">${this._e(this.s.eventType.name)}</span></div>` : '<span></span>'}
+</div>`;
+        }
+
+        // Distinct stepper: one dot per booking step, icon inside, check when done.
+        _tplStepper() {
+            const icons = {
+                date:    '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg>',
+                time:    '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+                details: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>',
+                done:    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 13l4 4L19 7"/></svg>',
+            };
+            const steps = [
+                { key: 'date',    label: t('stepDate', 'Choose a date') },
+                { key: 'time',    label: t('stepTime', 'Choose a time') },
+                { key: 'details', label: t('stepDetails', 'Your details') },
+            ];
+            const current = this.s.step >= 5 ? steps.length : this.s.step - 2; // step 2→0 … step 4→2.
+            const items = steps.map((s, i) => {
+                const state = i < current || this.s.step === 5 ? 'done' : (i === current ? 'current' : 'todo');
+                const icon = state === 'done' ? icons.done : icons[s.key];
+                return `
+  <li class="mwm-stepper__step mwm-stepper__step--${state}"${state === 'current' ? ' aria-current="step"' : ''}>
+    <span class="mwm-stepper__dot">${icon}</span>
+    <span class="mwm-stepper__label">${this._e(s.label)}</span>
+  </li>`;
+            }).join('');
+            return `
+<ol class="mwm-stepper" aria-label="${this._e(t('bookingProgress', 'Booking progress'))}">${items}
+</ol>`;
+        }
+
+        // Persistent selection panel: same position from the first picked day
+        // all the way through the details form and the confirmation screen.
+        _tplSummary() {
+            const et   = this.s.eventType;
+            const day  = this.s.date
+                ? new Date(this.s.date + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })
+                : '';
+            const time = this.s.slot ? this.s.slot.start_local : '';
+            return `
+<div class="mwm-summary" role="group" aria-label="${this._e(t('summarySelected', 'Your selection'))}">
+  ${et ? `<div class="mwm-summary__type"><span class="mwm-dot" style="background:${this._e(et.color)}"></span><span>${this._e(et.name)}</span><span class="mwm-summary__meta">${et.duration_minutes} ${this._e(t('minShort', 'min'))}</span></div>` : ''}
+  <div class="mwm-summary__day">${this._e(day)}</div>
+  <div class="mwm-summary__time">${time ? this._e(time) : this._e(t('summaryPickTime', 'Pick a time below'))} <span class="mwm-summary__tz">${this._e(this.tz)}</span></div>
 </div>`;
         }
 
@@ -402,13 +438,12 @@
         // Step 3 — choose time
         _tplStep3() {
             if (!this.s.slots) { this._loadSlots(); return this._tplLoading(); }
-            const dl = new Date(this.s.date + 'T12:00:00').toLocaleDateString(undefined, {weekday:'long', month:'long', day:'numeric'});
             if (!this.s.slots.length) {
-                return `<div class="mwm-step mwm-step--time"><h2 class="mwm-step__title" tabindex="-1">${this._e(dl)}</h2><p class="mwm-step__desc">${this._e(t('noTimes', 'No times available on this day. Please go back and pick another date.'))}</p></div>`;
+                return `<div class="mwm-step mwm-step--time"><h2 class="mwm-step__title" tabindex="-1">${this._e(t('stepTime', 'Choose a time'))}</h2><p class="mwm-step__desc">${this._e(t('noTimes', 'No times available on this day. Please go back and pick another date.'))}</p></div>`;
             }
             return `
 <div class="mwm-step mwm-step--time">
-  <h2 class="mwm-step__title" tabindex="-1">${this._e(dl)}</h2>
+  <h2 class="mwm-step__title" tabindex="-1">${this._e(t('stepTime', 'Choose a time'))}</h2>
   <ul class="mwm-slots" aria-label="${this._e(t('availableTimes', 'Available Times'))}">
     ${this.s.slots.map(slot => {
         const sel = this.s.slot?.start_utc === slot.start_utc;
@@ -495,25 +530,89 @@
             return `<div class="mwm-form__group">${lbl}${inp}</div>`;
         }
 
-        // Step 5 — confirmation
+        // Step 5 — confirmation (selected day/time stay visible in the summary panel above)
         _tplStep5() {
             const c = this.s.confirmation;
+            const gcal = this._gcalUrl(c);
+            const canShare = typeof navigator.share === 'function';
+            // Decorative sparkle burst around the check mark; keyframes fire on
+            // insertion, prefers-reduced-motion disables them in CSS.
+            const sparkles = Array.from({ length: 8 }, () => '<span class="mwm-confirm__sparkle" aria-hidden="true"></span>').join('');
             return `
 <div class="mwm-step mwm-step--confirm mwm-confirm">
-  <div class="mwm-confirm__icon" aria-hidden="true">&#10003;</div>
+  <div class="mwm-confirm__burst" aria-hidden="true">
+    <div class="mwm-confirm__icon">&#10003;</div>
+    ${sparkles}
+  </div>
   <h2 class="mwm-confirm__title" tabindex="-1">${this._e(t('booked', 'You’re booked!'))}</h2>
   <p class="mwm-confirm__sub">${fmt(this._e(t('confirmationSent', 'A confirmation email is heading to %s.')), `<strong>${this._e(c.booker_email)}</strong>`)}</p>
   <div class="mwm-confirm__details">
-    <div class="mwm-confirm__row"><span aria-hidden="true">&#128197;</span><span>${this._e(c.event_type_name)}</span></div>
-    <div class="mwm-confirm__row"><span aria-hidden="true">&#128336;</span><span>${this._e(c.start_local)}</span></div>
     ${c.meeting_type_label ? `<div class="mwm-confirm__row"><span aria-hidden="true">&#128205;</span><span>${this._e(c.meeting_type_label)}</span></div>` : ''}
     ${c.meeting_join_url ? `<div class="mwm-confirm__row"><span aria-hidden="true">&#128279;</span><span><a href="${this._e(c.meeting_join_url)}" target="_blank" rel="noopener noreferrer">${this._e(c.meeting_provider || t('openMeetingLink', 'Open meeting link'))}</a></span></div>` : ''}
+  </div>
+  <div class="mwm-confirm__actions">
+    ${gcal ? `<a class="mwm-btn-secondary" href="${this._e(gcal)}" target="_blank" rel="noopener noreferrer">${this._e(t('addToGoogleCalendar', 'Add to Google Calendar'))}</a>` : ''}
+    ${c.ics_url ? `<a class="mwm-btn-secondary" href="${this._e(c.ics_url)}" download>${this._e(t('downloadIcs', 'Download .ics'))}</a>` : ''}
+    <button type="button" class="mwm-btn-secondary" data-a="copy-details">${this._e(t('copyDetails', 'Copy details'))}</button>
+    ${canShare ? `<button type="button" class="mwm-btn-secondary" data-a="share-booking">${this._e(t('shareBooking', 'Share'))}</button>` : ''}
   </div>
   <div class="mwm-confirm__manage">
     <p>${this._e(t('needManage', 'Need to cancel or reschedule?'))}</p>
     <a href="${this._e(c.manage_url)}" class="mwm-btn-secondary">${this._e(t('manageBooking', 'Manage Booking'))}</a>
   </div>
 </div>`;
+        }
+
+        /**
+         * Google Calendar "add event" template URL built from the booking
+         * confirmation payload (times arrive as UTC 'Y-m-d H:i:s').
+         */
+        _gcalUrl(c) {
+            const compact = (s) => {
+                const m = String(s || '').match(/(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/);
+                return m ? `${m[1]}${m[2]}${m[3]}T${m[4]}${m[5]}${m[6]}Z` : '';
+            };
+            const start = compact(c.start_utc);
+            const end   = compact(c.end_utc);
+            if (!start || !end) return '';
+            const params = new URLSearchParams({
+                action: 'TEMPLATE',
+                text:   c.event_type_name || '',
+                dates:  start + '/' + end,
+                ctz:    c.timezone || 'UTC',
+            });
+            if (c.manage_url) params.set('details', c.manage_url);
+            return 'https://calendar.google.com/calendar/render?' + params.toString();
+        }
+
+        _detailsText() {
+            const c = this.s.confirmation;
+            if (!c) return '';
+            return [
+                c.event_type_name,
+                c.start_local + (c.timezone ? ' (' + c.timezone + ')' : ''),
+                c.meeting_type_label || '',
+                c.meeting_join_url || '',
+                c.manage_url ? fmt(t('manageAt', 'Manage: %s'), c.manage_url) : '',
+            ].filter(Boolean).join('\\n');
+        }
+
+        async _copyDetails() {
+            const text = this._detailsText();
+            try {
+                await navigator.clipboard.writeText(text);
+                this._announce(t('detailsCopied', 'Booking details copied.'));
+            } catch (e) {
+                this._announceError(t('copyFailed', 'Could not copy to clipboard.'));
+            }
+        }
+
+        async _shareBooking() {
+            const c = this.s.confirmation;
+            if (!c || typeof navigator.share !== 'function') return;
+            try {
+                await navigator.share({ title: c.event_type_name || '', text: this._detailsText() });
+            } catch (e) { /* aborted by the user — not an error */ }
         }
 
         // -- Events -----------------------------------------------------------
@@ -582,6 +681,8 @@
                     this._refocus = '.mwm-step__title';
                     this._set({ error: null });
                     break;
+                case 'copy-details':  this._copyDetails(); break;
+                case 'share-booking': this._shareBooking(); break;
             }
         }
 

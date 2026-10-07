@@ -51,7 +51,7 @@
 			{ title: __( 'Accent color', 'meet-with-me' ), initialOpen: false },
 			el( ColorPicker, {
 				color: props.value || '#2563eb',
-				disableAlpha: true,
+				enableAlpha: false,
 				onChange: function ( color ) {
 					props.onChange( colorToHex( color ) );
 				}

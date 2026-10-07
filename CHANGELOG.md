@@ -2,6 +2,19 @@
 
 All notable changes to Meet With Me are documented here.
 
+## 0.4.0 — 2026-10-06
+
+Booking wizard UX foundation (first release of the design program):
+
+- **Persistent selection panel** — "Your selection" card (accent border, event type + duration, weekday date, chosen time with the booker's timezone) renders in the same position on the time, details, and confirmation steps. Previously the chosen date was only the time-step heading and vanished on the details form — the exact "I can't verify my selection before submitting" problem. Step titles are now stable step names ("Choose a time", "Your details"); focus targets unchanged.
+- **Stepper rework** — the old back + thin progress bar + event-name row is now a quiet top bar (small muted back link and event-type label) over a distinct three-step stepper with inline-SVG icons (calendar grid, clock, form card), accent-filled done dots with checks, an accent ring on the current step, and connecting segments. All-done state renders on the confirmation. Labels hide under 520px.
+- **Confirmation actions** — new action row: Add to Google Calendar (template URL built from the booking's UTC start/end and timezone), Download .ics, Copy details (clipboard + polite announcement), and Share where `navigator.share` exists. Redundant date/event rows were dropped from the details block since the selection panel above now carries them.
+- **Sparkle burst** — eight decorative four-point stars animate outward from the confirmation check mark (pure CSS, staggered, `prefers-reduced-motion` disables it).
+- **ICS download endpoint** — `?mwm_ics=<cancel token>` serves the booking as a `text/calendar` attachment via `MWM_Public::ics_response()`: 64-hex token shape validated, confirmed bookings only (cancelled/rescheduled rows refuse), no-store/no-referrer/noindex headers matching the manage page. The REST confirmation payload gained `start_utc`, `end_utc`, and `ics_url`.
+- **Fixed the block-editor accent picker crash** — changing the accent color on the Booking Form / Button / Cards blocks crashed the block ("This block has encountered an error and cannot be previewed") on WordPress 7.x: the hand-written editor scripts used the deprecated ColorPicker props (`disableAlpha` + object-payload `onChange`), which WP routes through a back-compat adapter that throws the moment a color changes unless the legacy `onChangeComplete` prop is present. All three blocks now use the current API (`enableAlpha: false`); `colorToHex()` still normalizes both payload shapes. Verified in a live editor: slider and hex changes commit the attribute without crashing and the ServerSideRender preview live-updates with the accent.
+- **Tests** — new `MWM_ICS_Download_Test` (confirmed booking serves VCALENDAR, cancelled refuses, malformed/unknown tokens rejected, payload carries UTC times + ICS URL).
+- Verified end-to-end in a browser harness against the real JS/CSS with a stubbed REST layer: all five steps, focus management, hostile-theme bullet leak contained, copy announcement, sparkle animations.
+
 ## 0.3.2 — 2026-10-06
 
 First theme-compatibility fix from live testing:
