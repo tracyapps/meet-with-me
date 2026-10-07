@@ -2,6 +2,13 @@
 
 All notable changes to Meet With Me are documented here.
 
+## 0.3.2 — 2026-10-06
+
+First theme-compatibility fix from live testing:
+
+- **Stray bullets fixed** — the time-slot grid (and any list the plugin renders) could pick up bullet markers and indents from theme/page-builder `ul`/`li` styles, because the reset only covered the list container and not the `li` children (a direct `li` rule always beats an inherited value). Added a theme-leak guard scoped to `.mwm-` containers: `list-style`/`margin`/`padding` resets plus `content: none` on `li` pseudo-elements, `!important` so theme selectors lose regardless of enqueue order.
+- **Roomier click targets** — bumped padding on time-slot buttons, calendar day cells, calendar/month nav buttons, primary/secondary/danger buttons, and the modal close button (now 28×28 minimum) for easier, more confident tapping. Values will be revisited per style bundle in the upcoming booking-UI design pass.
+
 ## 0.3.1 — 2026-10-06
 
 First bugfix release after launch:

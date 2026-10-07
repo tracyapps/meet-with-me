@@ -4,7 +4,7 @@ Tags: booking, appointments, scheduling, calendar, zoom
 Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.3.1
+Stable tag: 0.3.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -93,6 +93,10 @@ Every confirmation email contains a private manage link. Bookers can cancel or p
 Uninstalling removes all plugin options, transients, and booking data — including on every site of a multisite network.
 
 == Changelog ==
+
+= 0.3.2 =
+* Fixed: theme bullet markers and indents leaking into the booking wizard (time-slot list, any list inside plugin containers) — a scoped CSS guard now strips list styling from page-builder/theme `li` rules.
+* UI: roomier clickable targets — time-slot buttons, calendar day cells, month nav buttons, primary/secondary/danger buttons, and the modal close button all gained padding.
 
 = 0.3.1 =
 * Fixed: the one-click Google connection now works out of the box on every install — the shared connection client ID ships with the plugin (0.3.0 showed "One-click connection is not configured on this site yet" until a filter or setting supplied it).

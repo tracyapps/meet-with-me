@@ -34,6 +34,54 @@
 }
 
 /* =====================================================================
+   Theme-leak guards
+   Themes and page builders routinely style bare `ul`/`li` inside content
+   and widget areas — bullets, indents, pseudo-element markers. Anything
+   the plugin renders as a list is layout, never semantics-as-bullets, so
+   strip all of it inside our containers. Scoped to .mwm- roots only, with
+   !important so theme selectors lose regardless of enqueue order.
+   ===================================================================== */
+
+.mwm-booking-wizard ul,
+.mwm-booking-wizard ol,
+.mwm-cards ul,
+.mwm-cards ol,
+.mwm-manage ul,
+.mwm-manage ol,
+.mwm-modal ul,
+.mwm-modal ol,
+ul.mwm-slots {
+    list-style: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.mwm-booking-wizard li,
+.mwm-cards li,
+.mwm-manage li,
+.mwm-modal li,
+.mwm-slots > li {
+    list-style: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* Builder themes that draw bullets with pseudo-elements instead of
+   list-style (divi/elementor-style `li:before { content: '•' }`). */
+.mwm-booking-wizard li::before,
+.mwm-booking-wizard li::after,
+.mwm-cards li::before,
+.mwm-cards li::after,
+.mwm-manage li::before,
+.mwm-manage li::after,
+.mwm-modal li::before,
+.mwm-modal li::after,
+.mwm-slots > li::before,
+.mwm-slots > li::after {
+    content: none !important;
+}
+
+/* =====================================================================
    Wizard base
    ===================================================================== */
 
@@ -105,7 +153,7 @@
 /* Step 2 — calendar */
 .mwm-cal__nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .mwm-cal__nav-main { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.mwm-cal__nav-btn { background: none; border: 1px solid var(--mwm-border, currentColor); border-radius: var(--mwm-radius, 4px); cursor: pointer; padding: 4px 10px; font-size: 1.1em; line-height: 1; }
+.mwm-cal__nav-btn { background: none; border: 1px solid var(--mwm-border, currentColor); border-radius: var(--mwm-radius, 4px); cursor: pointer; padding: 8px 14px; font-size: 1.1em; line-height: 1; }
 .mwm-cal__nav-btn:disabled { opacity: 0.3; cursor: default; }
 .mwm-cal__title-btn {
     background: none;
@@ -174,7 +222,7 @@
 .mwm-cal__hdr { text-align: center; font-size: 0.75em; font-weight: 700; padding: 4px 0; opacity: 0.6; text-transform: uppercase; }
 .mwm-cal__day {
     text-align: center;
-    padding: 8px 4px;
+    padding: 10px 6px;
     border-radius: var(--mwm-radius, 4px);
     font-size: 0.9em;
     line-height: 1;
@@ -211,7 +259,7 @@
 
 /* Step 3 — time slots */
 .mwm-slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; list-style: none; padding: 0; margin: 0; }
-.mwm-slot  { width: 100%; text-align: center; padding: calc(10px * var(--mwm-space, 1)) 6px; border: 1px solid var(--mwm-border, currentColor); border-radius: var(--mwm-radius, 4px); cursor: pointer; background: none; font-size: 0.9em; }
+.mwm-slot  { width: 100%; text-align: center; padding: calc(12px * var(--mwm-space, 1)) 10px; border: 1px solid var(--mwm-border, currentColor); border-radius: var(--mwm-radius, 4px); cursor: pointer; background: none; font-size: 0.9em; }
 .mwm-slot:hover    { opacity: 0.75; }
 .mwm-slot--sel     { font-weight: 700; background: var(--mwm-accent, transparent); color: var(--mwm-accent-contrast, inherit); }
 
@@ -268,7 +316,7 @@
 .mwm-btn-primary,
 .mwm-btn-secondary {
     display: inline-block;
-    padding: 10px 22px;
+    padding: 12px 26px;
     border: 1px solid var(--mwm-border, currentColor);
     border-radius: var(--mwm-btn-radius, 4px);
     cursor: pointer;
@@ -282,7 +330,7 @@
 /* Danger button (cancel action) */
 .mwm-btn-danger {
     display: inline-block;
-    padding: 10px 22px;
+    padding: 12px 26px;
     border: 1px solid var(--mwm-border, currentColor);
     border-radius: var(--mwm-btn-radius, 4px);
     cursor: pointer;
@@ -337,10 +385,10 @@
     cursor: pointer;
     line-height: 1;
     opacity: 0.5;
-    /* WCAG 2.5.8 target size: at least 24×24 CSS px */
-    min-width: 24px;
-    min-height: 24px;
-    padding: 6px 8px;
+    /* WCAG 2.5.8 target size: at least 24×24 CSS px (28 here for comfort) */
+    min-width: 28px;
+    min-height: 28px;
+    padding: 8px 10px;
     box-sizing: content-box;
 }
 .mwm-modal__close:hover { opacity: 1; }
